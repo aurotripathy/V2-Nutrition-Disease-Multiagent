@@ -1,0 +1,5 @@
+
+👋 Hello! I'm your nutrition assistant.
+I can tell you the ingredients of a food item of your choice, and optionally, the impact of the ingredients on your health. 
+How can I help you today?"
+   
