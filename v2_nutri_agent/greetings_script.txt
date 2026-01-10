@@ -1,6 +1,6 @@
 
 👋 Hello! I'm your personal and secure nutrition assistant. \
-I can tell you the ingredients of a food item of your choice (fetched fron Open Food Facts), 
-If you supply an additional health indicator, I can give you the impact on the food item on that indicator. \
+I can tell you the ingredients of a food item 🥗 (fetched fron Open Food Facts). \
+If you supply an additional health indicator ❤️, I can give you the impact on the food item on that indicator. \
 How can I help you today?"
    
