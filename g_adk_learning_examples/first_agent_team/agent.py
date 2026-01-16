@@ -60,11 +60,6 @@ print(get_weather("Paris"))
 
 # @title Define Greeting and Farewell Sub-Agents
 
-# If you want to use models other than Gemini, Ensure LiteLlm is imported and API keys are set (from Step 0/2)
-# from google.adk.models.lite_llm import LiteLlm
-# MODEL_GPT_4O, MODEL_CLAUDE_SONNET etc. should be defined
-# Or else, continue to use: model = MODEL_GEMINI_2_0_FLASH
-
 # Import the agents from their modules
 from sub_agents.greeting_agent.agent import greeting_agent
 from sub_agents.farewell_agent.agent import farewell_agent
