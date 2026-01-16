@@ -175,32 +175,12 @@ if root_agent_var_name in globals() and globals()[root_agent_var_name]:
                                session_id=SESSION_ID)
 
         while True:
-            # try:
-            #     # Await user input asynchronously
-            #     city_name = await async_input("Enter a city name or 'quit': ")
-            #     if city_name.lower() == 'quit':
-            #         print("Exiting...")
-            #         await call_agent_async(query = "quit",
-            #                     runner=runner_agent_team,
-            #                     user_id=USER_ID,
-            #                     session_id=SESSION_ID)
-            #         break
-            #     else:
-            #         print(f"You entered: {city_name}")
-
-            #     await call_agent_async(query = f"What is the weather in {city_name}?",
-            #                         runner=runner_agent_team,
-            #                         user_id=USER_ID,
-            #                         session_id=SESSION_ID)
-            # except (KeyboardInterrupt, EOFError):
-            #     print("\nExiting due to interrupt...")
-            #     break
 
             try:
                 # Await user input asynchronously
-                city_name = await async_input("Enter a city name or 'quit': ")
+                user_input = await async_input("Enter a city name or 'quit': ")
 
-                await call_agent_async(query=f"{city_name}?",
+                await call_agent_async(query=f"{user_input}",
                                        runner=runner_agent_team,
                                        user_id=USER_ID,
                                        session_id=SESSION_ID)
