@@ -1,5 +1,5 @@
 """
-step 3 of https://google.github.io/adk-docs/tutorials/agent-team/
+Step 4: Adding Memory and Personalization with Session State
 """
 # @title Import necessary libraries
 import os
@@ -39,23 +39,66 @@ if not api_key:
     )
 os.environ["GOOGLE_API_KEY"] = api_key
 
-print(f"Gemini API Key loaded: {api_key}")
+print(f"Gemini API Key loaded")
 
 # --- Define Model Constants for easier use ---
-
 # More supported models can be referenced here: https://ai.google.dev/gemini-api/docs/models#model-variations
-MODEL_GEMINI_2_0_FLASH = "gemini-2.5-flash"
+MODEL_GEMINI_2_5_FLASH = "gemini-2.5-flash"
 
-print("\nEnvironment configured.")
+print("Model configured.")
+
+
+# @title 1. Initialize New Session Service and State
+# Import necessary session components
+from google.adk.sessions import InMemorySessionService
+
+# Create a NEW session service instance for this state demonstration
+session_service_stateful = InMemorySessionService()
+print("✅ New InMemorySessionService created for state demonstration.")
+
+# Define a NEW session ID for this part of the tutorial
+SESSION_ID_STATEFUL = "session_state_demo_001"
+USER_ID_STATEFUL = "user_state_demo"
+APP_NAME = "weather_tutorial_agent_team"  # Define APP_NAME before use
+
+# Define initial state data - user prefers Celsius initially
+initial_state = {
+    "user_preference_temperature_unit": "Celsius"
+}
+
+# Async function to initialize session with state
+# deviates a bit since await cannot be called a module level code.
+async def init_session_with_state():
+    """Initialize session with initial state."""
+    # Create the session, providing the initial state
+    session_stateful = await session_service_stateful.create_session(
+        app_name=APP_NAME,  # Use the consistent app name
+        user_id=USER_ID_STATEFUL,
+        session_id=SESSION_ID_STATEFUL,
+        state=initial_state  # <<< Initialize state during creation
+    )
+    print(f"✅ Session '{SESSION_ID_STATEFUL}' created for user '{USER_ID_STATEFUL}'.")
+
+    # Verify the initial state was set correctly
+    retrieved_session = await session_service_stateful.get_session(
+        app_name=APP_NAME,
+        user_id=USER_ID_STATEFUL,
+        session_id=SESSION_ID_STATEFUL
+    )
+    print("\n--- Initial Session State ---")
+    if retrieved_session:
+        print(retrieved_session.state)
+    else:
+        print("Error: Could not retrieve session.")
+    return session_stateful
+
+# Initialize session with state (run async code)
+session_stateful = asyncio.run(init_session_with_state())
 
 
 # @title Import tools and prompts
-from schema_and_tools import get_weather
+from schema_and_tools import get_weather_stateful
 from prompts import WEATHER_AGENT_TEAM_INSTRUCTION, WEATHER_AGENT_TEAM_DESCRIPTION
-
-# Example tool usage (optional test)
-print(get_weather("New York"))
-print(get_weather("Paris"))
 
 
 # @title Define Greeting and Farewell Sub-Agents
@@ -68,38 +111,55 @@ from sub_agents.farewell_agent.agent import farewell_agent
 # @title Define the Root Agent with Sub-Agents
 
 # Ensure sub-agents were created successfully before defining the root agent.
-# Also ensure the original 'get_weather' tool is defined.
-root_agent = None
-runner_root = None  # Initialize runner
+# Also ensure the  'get_weather_stateful' tool is defined.
+root_agent_stateful = None
+runner_root_stateful = None  # Initialize runner
+from schema_and_tools import get_weather_stateful
 
-if greeting_agent and farewell_agent:
+# Check if function is defined (proper way for imported functions)
+# Method 1: Use callable() - checks if it's a callable object
+is_defined = callable(get_weather_stateful)
+print(f"✅ State-aware 'get_weather_stateful' tool defined: {is_defined}")
+
+if greeting_agent and farewell_agent and callable(get_weather_stateful):
+    print(f"✅ Sub-agents and tools are defined. Creating stateful root agent...")
     # Let's use a capable Gemini model for the root agent to handle orchestration
-    root_agent_model = MODEL_GEMINI_2_0_FLASH
+    root_agent_model = MODEL_GEMINI_2_5_FLASH
 
-    weather_agent_team = Agent(
-        name="weather_agent_v2",  # Give it a new version name
+    root_agent_stateful = Agent(
+        name="weather_agent_v4_stateful",  # Give it a new version name
         model=root_agent_model,
         description=WEATHER_AGENT_TEAM_DESCRIPTION,
         instruction=WEATHER_AGENT_TEAM_INSTRUCTION,
-        tools=[get_weather],  # Root agent still needs the weather tool for its core task
+        tools=[get_weather_stateful],  # Root agent still needs the weather tool for its core task
         # Key change: Link the sub-agents here!
         # insert before callback to check for quit
-        sub_agents=[greeting_agent, farewell_agent]
+        sub_agents=[greeting_agent, farewell_agent],
+        output_key="last_weather_report", # <<< Auto-save agent's final weather response
     )
-    print(f"✅ Root Agent '{weather_agent_team.name}' created using model '{root_agent_model}' with sub-agents: {[sa.name for sa in weather_agent_team.sub_agents]}")
+    print(f"✅ Root Agent '{root_agent_stateful.name}' created using stateful tool and output_key.")
+
+    # --- Create Runner for this Root Agent & NEW Session Service ---
+    runner_root_stateful = Runner(
+        agent=root_agent_stateful,
+        app_name=APP_NAME,
+        session_service=session_service_stateful # Use the NEW stateful session service
+    )
+    print(f"✅ Runner created for stateful root agent '{runner_root_stateful.agent.name}' using stateful session service.")
 
 else:
-    print("❌ Cannot create root agent because one or more sub-agents failed to initialize.")
-    if not greeting_agent:
-        print(" - Greeting Agent is missing.")
-    if not farewell_agent:
-        print(" - Farewell Agent is missing.")
+    print("❌ Cannot create stateful root agent. Prerequisites missing.")
+    if not greeting_agent: print(" - greeting_agent definition missing.")
+    if not farewell_agent: print(" - farewell_agent definition missing.")
+    if not callable(get_weather_stateful): print(" - get_weather_stateful tool missing.")
 
 
-# @title Interact with the Agent Team
+# # @title 4. Interact to Test State Flow and output_key
 import asyncio  # Ensure asyncio is imported
 
-# Ensure the root agent (e.g., 'weather_agent_team' or 'root_agent' from the previous cell) is defined.
+# Ensure the stateful runner (runner_root_stateful) is available from the previous cell
+# Ensure call_agent_async, USER_ID_STATEFUL, SESSION_ID_STATEFUL, APP_NAME are defined
+
 
 
 # Ensure the call_agent_async function is defined.
@@ -131,64 +191,71 @@ async def call_agent_async(query: str, runner, user_id, session_id):
     print(f"<<< Agent Response: {final_response_text}")
 
 
-async def async_input(prompt: str = "") -> str:
-    """Reads a line of input asynchronously."""
-    # Run the blocking input() function in a separate thread
-    return await asyncio.to_thread(input, prompt)
+# async def async_input(prompt: str = "") -> str:
+#     """Reads a line of input asynchronously."""
+#     # Run the blocking input() function in a separate thread
+#     return await asyncio.to_thread(input, prompt)
 
-# Check if the root agent variable exists before defining the conversation function
-root_agent_var_name = 'root_agent'  # Default name from Step 3 guide
-if 'weather_agent_team' in globals():  # Check if user used this name instead
-    root_agent_var_name = 'weather_agent_team'
-elif 'root_agent' not in globals():
-    print("⚠️ Root agent ('root_agent' or 'weather_agent_team') not found. Cannot define run_team_conversation.")
-    # Assign a dummy value to prevent NameError later if the code block runs anyway
-    root_agent = None  # Or set a flag to prevent execution
+# # Check if the root agent variable exists before defining the conversation function
+# root_agent_var_name = 'root_agent'  # Default name from Step 3 guide
+# if 'weather_agent_team' in globals():  # Check if user used this name instead
+#     root_agent_var_name = 'weather_agent_team'
+# elif 'root_agent' not in globals():
+#     print("⚠️ Root agent ('root_agent' or 'weather_agent_team') not found. Cannot define run_team_conversation.")
+#     # Assign a dummy value to prevent NameError later if the code block runs anyway
+#     root_agent = None  # Or set a flag to prevent execution
 
 # Only define and run if the root agent exists
-if root_agent_var_name in globals() and globals()[root_agent_var_name]:
+if 'runner_root_stateful' in globals() and runner_root_stateful:
     # Define the main async function for the conversation logic.
     # The 'await' keywords INSIDE this function are necessary for async operations.
-    async def run_team_conversation():
-        print("\n--- Testing Agent Team Delegation ---")
-        session_service = InMemorySessionService()
-        APP_NAME = "weather_tutorial_agent_team"
-        USER_ID = "user_1_agent_team"
-        SESSION_ID = "session_001_agent_team"
-        session = await session_service.create_session(
-            app_name=APP_NAME, user_id=USER_ID, session_id=SESSION_ID
-        )
-        print(f"Session created: App='{APP_NAME}', User='{USER_ID}', Session='{SESSION_ID}'")
+    async def run_stateful_conversation():
+        print("\n--- Testing State: Temperature Unit Conversion & output_key ---")
+        # 1. Check weather (Uses initial state: Celsius)
+        print("--- Turn 1: Requesting weather in London (expect Celsius) ---")
+        await call_agent_async(query= "What's the weather in London?",
+                               runner=runner_root_stateful,
+                               user_id=USER_ID_STATEFUL,
+                               session_id=SESSION_ID_STATEFUL
+                              )
 
-        actual_root_agent = globals()[root_agent_var_name]
-        runner_agent_team = Runner(  # Or use InMemoryRunner
-            agent=actual_root_agent,
-            app_name=APP_NAME,
-            session_service=session_service
-        )
-        print(f"Runner created for agent '{actual_root_agent.name}'.")
+        # 2. Manually update state preference to Fahrenheit - DIRECTLY MODIFY STORAGE
+        print("\n--- Manually Updating State: Setting unit to Fahrenheit ---")
+        try:
+            # Access the internal storage directly - THIS IS SPECIFIC TO InMemorySessionService for testing
+            # NOTE: In production with persistent services (Database, VertexAI), you would
+            # typically update state via agent actions or specific service APIs if available,
+            # not by direct manipulation of internal storage.
+            stored_session = session_service_stateful.sessions[APP_NAME][USER_ID_STATEFUL][SESSION_ID_STATEFUL]
+            stored_session.state["user_preference_temperature_unit"] = "Fahrenheit"
+            # Optional: You might want to update the timestamp as well if any logic depends on it
+            # import time
+            # stored_session.last_update_time = time.time()
+            print(f"--- Stored session state updated. Current 'user_preference_temperature_unit': {stored_session.state.get('user_preference_temperature_unit', 'Not Set')} ---") # Added .get for safety
+        except KeyError:
+            print(f"--- Error: Could not retrieve session '{SESSION_ID_STATEFUL}' from internal storage for user '{USER_ID_STATEFUL}' in app '{APP_NAME}' to update state. Check IDs and if session was created. ---")
+        except Exception as e:
+             print(f"--- Error updating internal session state: {e} ---")
 
-        # --- Interactions using await (correct within async def) ---
-        await call_agent_async(query="Hello there, Teddy",
-                               runner=runner_agent_team,
-                               user_id=USER_ID,
-                               session_id=SESSION_ID)
+        # 3. Check weather again (Tool should now use Fahrenheit)
+        # This will also update 'last_weather_report' via output_key
+        print("\n--- Turn 2: Requesting weather in New York (expect Fahrenheit) ---")
+        await call_agent_async(query= "Tell me the weather in New York.",
+                               runner=runner_root_stateful,
+                               user_id=USER_ID_STATEFUL,
+                               session_id=SESSION_ID_STATEFUL
+                              )
 
-        while True:
+        # 4. Test basic delegation (should still work)
+        # This will update 'last_weather_report' again, overwriting the NY weather report
+        print("\n--- Turn 3: Sending a greeting ---")
+        await call_agent_async(query= "Hi!",
+                               runner=runner_root_stateful,
+                               user_id=USER_ID_STATEFUL,
+                               session_id=SESSION_ID_STATEFUL
+                              )
 
-            try:
-                # Await user input asynchronously
-                user_input = await async_input("Enter a city name or 'quit': ")
-
-                await call_agent_async(query=f"{user_input}",
-                                       runner=runner_agent_team,
-                                       user_id=USER_ID,
-                                       session_id=SESSION_ID)
-            except (KeyboardInterrupt, EOFError):
-                print("\nExiting due to interrupt...")
-                break
-
-    # --- Execute the `run_team_conversation` async function ---
+    # --- Execute the `run_stateful_conversation` async function ---
 
     # METHOD 2: asyncio.run (For Standard Python Scripts [.py])
     # If running this code as a standard Python script from your terminal,
@@ -200,7 +267,7 @@ if root_agent_var_name in globals() and globals()[root_agent_var_name]:
         print("Executing using 'asyncio.run()' (for standard Python scripts)...")
         try:
             # This creates an event loop, runs your async function, and closes the loop.
-            asyncio.run(run_team_conversation())
+            asyncio.run(run_stateful_conversation())
         except Exception as e:
             print(f"An error occurred: {e}")
 
