@@ -14,6 +14,6 @@ def say_hello(name: Optional[str] = None) -> str:
         greeting = f"Hello, {name}!"
         print(f"--- Tool: say_hello called with name: {name} ---")
     else:
-        greeting = "Hello there!"  # Default greeting if name is None or not explicitly passed
+        greeting = "Hello there! I can give you info about the weather in a city. Please ask me about the weather in a city."  # Default greeting if name is None or not explicitly passed
         print(f"--- Tool: say_hello called without a specific name (name_arg_value: {name}) ---")
     return greeting
