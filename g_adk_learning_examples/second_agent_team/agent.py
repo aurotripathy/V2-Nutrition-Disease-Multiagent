@@ -191,20 +191,6 @@ async def call_agent_async(query: str, runner, user_id, session_id):
     print(f"<<< Agent Response: {final_response_text}")
 
 
-# async def async_input(prompt: str = "") -> str:
-#     """Reads a line of input asynchronously."""
-#     # Run the blocking input() function in a separate thread
-#     return await asyncio.to_thread(input, prompt)
-
-# # Check if the root agent variable exists before defining the conversation function
-# root_agent_var_name = 'root_agent'  # Default name from Step 3 guide
-# if 'weather_agent_team' in globals():  # Check if user used this name instead
-#     root_agent_var_name = 'weather_agent_team'
-# elif 'root_agent' not in globals():
-#     print("⚠️ Root agent ('root_agent' or 'weather_agent_team') not found. Cannot define run_team_conversation.")
-#     # Assign a dummy value to prevent NameError later if the code block runs anyway
-#     root_agent = None  # Or set a flag to prevent execution
-
 # Only define and run if the root agent exists
 if 'runner_root_stateful' in globals() and runner_root_stateful:
     # Define the main async function for the conversation logic.
