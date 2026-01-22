@@ -24,9 +24,8 @@ print("Libraries imported.")
 from utils.environment import load_environment
 load_environment()
 
-# --- Define Model Constants for easier use ---
-# More supported models can be referenced here: https://ai.google.dev/gemini-api/docs/models#model-variations
-MODEL_GEMINI_2_5_FLASH = "gemini-2.5-flash"
+# Import model constants
+from config import MODEL_GEMINI_2_5_FLASH
 
 print(f"Model selected: {MODEL_GEMINI_2_5_FLASH}.")
 
@@ -74,15 +73,14 @@ session_stateful = asyncio.run(init_session_with_state())
 
 
 # @title Import tools and prompts
-from schema_and_tools import get_weather_stateful
-from prompts import WEATHER_AGENT_TEAM_INSTRUCTION, WEATHER_AGENT_TEAM_DESCRIPTION
+from prompts import ORCHESTRATOR_AGENT_FOR_TEAM_INSTRUCTION
 
 
 # @title Define Greeting and Farewell Sub-Agents
 
 # Import the agents from their modules
-from sub_agents.greeting_agent.agent import greeting_agent
-from sub_agents.farewell_agent.agent import farewell_agent
+from sub_agents.greeting_handler.agent import greeting_handler_agent 
+from sub_agents.farewell_handler.agent import farewell_handler_agent 
 
 
 # @title Define the Root Agent with Sub-Agents
@@ -91,44 +89,32 @@ from sub_agents.farewell_agent.agent import farewell_agent
 # Also ensure the  'get_weather_stateful' tool is defined.
 root_agent_stateful = None
 runner_root_stateful = None  # Initialize runner
-from schema_and_tools import get_weather_stateful
 
 # Check if function is defined (proper way for imported functions)
 # Method 1: Use callable() - checks if it's a callable object
-is_defined = callable(get_weather_stateful)
-print(f"✅ State-aware 'get_weather_stateful' tool defined: {is_defined}")
 
-if greeting_agent and farewell_agent and callable(get_weather_stateful):
-    print(f"✅ Sub-agents and tools are defined. Creating stateful root agent...")
-    # Let's use a capable Gemini model for the root agent to handle orchestration
-    root_agent_model = MODEL_GEMINI_2_5_FLASH
 
-    root_agent_stateful = Agent(
-        name="weather_agent_v4_stateful",  # Give it a new version name
-        model=root_agent_model,
-        description=WEATHER_AGENT_TEAM_DESCRIPTION,
-        instruction=WEATHER_AGENT_TEAM_INSTRUCTION,
-        tools=[get_weather_stateful],  # Root agent still needs the weather tool for its core task
-        # Key change: Link the sub-agents here!
-        # insert before callback to check for quit
-        sub_agents=[greeting_agent, farewell_agent],
-        output_key="last_weather_report", # <<< Auto-save agent's final weather response
-    )
-    print(f"✅ Root Agent '{root_agent_stateful.name}' created using stateful tool and output_key.")
+root_agent_model = MODEL_GEMINI_2_5_FLASH
 
-    # --- Create Runner for this Root Agent & NEW Session Service ---
-    runner_root_stateful = Runner(
-        agent=root_agent_stateful,
-        app_name=APP_NAME,
-        session_service=session_service_stateful # Use the NEW stateful session service
-    )
-    print(f"✅ Runner created for stateful root agent '{runner_root_stateful.agent.name}' using stateful session service.")
+root_agent_stateful = Agent(
+    name="orchestrator_agent",
+    model=root_agent_model,
+    description="Root orchestrator agent coordinating the sub-agents.",
+    instruction=ORCHESTRATOR_AGENT_FOR_TEAM_INSTRUCTION, # Root agent still needs the weather tool for its core task
+    # Key change: Link the sub-agents here!
+    # insert before callback to check for quit
+    sub_agents=[greeting_handler_agent, farewell_handler_agent],
+    output_key="last_weather_report", # <<< Auto-save agent's final weather response
+)
+print(f"✅ Root Agent '{root_agent_stateful.name}' created using stateful tool and output_key.")
 
-else:
-    print("❌ Cannot create stateful root agent. Prerequisites missing.")
-    if not greeting_agent: print(" - greeting_agent definition missing.")
-    if not farewell_agent: print(" - farewell_agent definition missing.")
-    if not callable(get_weather_stateful): print(" - get_weather_stateful tool missing.")
+# --- Create Runner for this Root Agent & NEW Session Service ---
+runner_root_stateful = Runner(
+    agent=root_agent_stateful,
+    app_name=APP_NAME,
+    session_service=session_service_stateful # Use the NEW stateful session service
+)
+print(f"✅ Runner created for stateful root agent '{runner_root_stateful.agent.name}' using stateful session service.")
 
 
 # # @title 4. Interact to Test State Flow and output_key
