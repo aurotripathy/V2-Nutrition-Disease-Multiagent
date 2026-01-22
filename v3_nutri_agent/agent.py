@@ -87,7 +87,7 @@ from sub_agents.farewell_handler.agent import farewell_handler_agent
 
 # Ensure sub-agents were created successfully before defining the root agent.
 # Also ensure the  'get_weather_stateful' tool is defined.
-root_agent_stateful = None
+root_agent = None
 runner_root_stateful = None  # Initialize runner
 
 # Check if function is defined (proper way for imported functions)
@@ -96,7 +96,7 @@ runner_root_stateful = None  # Initialize runner
 
 root_agent_model = MODEL_GEMINI_2_5_FLASH
 
-root_agent_stateful = Agent(
+root_agent = Agent(
     name="orchestrator_agent",
     model=root_agent_model,
     description="Root orchestrator agent coordinating the sub-agents.",
@@ -104,17 +104,17 @@ root_agent_stateful = Agent(
     # Key change: Link the sub-agents here!
     # insert before callback to check for quit
     sub_agents=[greeting_handler_agent, farewell_handler_agent],
-    output_key="last_weather_report", # <<< Auto-save agent's final weather response
+    output_key="TBD", # <<< Auto-save agent's final response
 )
-print(f"✅ Root Agent '{root_agent_stateful.name}' created using stateful tool and output_key.")
+print(f"✅ Root Agent '{root_agent.name}' created using TBD.")
 
 # --- Create Runner for this Root Agent & NEW Session Service ---
-runner_root_stateful = Runner(
-    agent=root_agent_stateful,
+runner_root = Runner(
+    agent=root_agent,
     app_name=APP_NAME,
     session_service=session_service_stateful # Use the NEW stateful session service
 )
-print(f"✅ Runner created for stateful root agent '{runner_root_stateful.agent.name}' using stateful session service.")
+print(f"✅ Runner created for stateful root agent '{runner_root.agent.name}' using stateful session service.")
 
 
 # # @title 4. Interact to Test State Flow and output_key
@@ -155,7 +155,7 @@ async def call_agent_async(query: str, runner, user_id, session_id):
 
 
 # Only define and run if the root agent exists
-if 'runner_root_stateful' in globals() and runner_root_stateful:
+if 'runner_root' in globals() and runner_root:
     # Define the main async function for the conversation logic.
     # The 'await' keywords INSIDE this function are necessary for async operations.
     async def run_stateful_conversation():
@@ -163,7 +163,7 @@ if 'runner_root_stateful' in globals() and runner_root_stateful:
         # 1. Check weather (Uses initial state: Celsius)
         print("--- Turn 1: Requesting weather in London (expect Celsius) ---")
         await call_agent_async(query= "What's the weather in London?",
-                               runner=runner_root_stateful,
+                               runner=runner_root,
                                user_id=USER_ID_STATEFUL,
                                session_id=SESSION_ID_STATEFUL
                               )
@@ -190,7 +190,7 @@ if 'runner_root_stateful' in globals() and runner_root_stateful:
         # This will also update 'last_weather_report' via output_key
         print("\n--- Turn 2: Requesting weather in New York (expect Fahrenheit) ---")
         await call_agent_async(query= "Tell me the weather in New York.",
-                               runner=runner_root_stateful,
+                               runner=runner_root,
                                user_id=USER_ID_STATEFUL,
                                session_id=SESSION_ID_STATEFUL
                               )
@@ -199,7 +199,7 @@ if 'runner_root_stateful' in globals() and runner_root_stateful:
         # This will update 'last_weather_report' again, overwriting the NY weather report
         print("\n--- Turn 3: Sending a greeting ---")
         await call_agent_async(query= "Hi!",
-                               runner=runner_root_stateful,
+                               runner=runner_root,
                                user_id=USER_ID_STATEFUL,
                                session_id=SESSION_ID_STATEFUL
                               )

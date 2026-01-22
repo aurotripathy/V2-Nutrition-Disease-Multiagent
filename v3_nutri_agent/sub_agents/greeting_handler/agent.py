@@ -15,7 +15,7 @@ try:
         # Using a potentially different/cheaper model for a simple task
         model = MODEL_GEMINI_2_5_FLASH,
         # model=LiteLlm(model=MODEL_GPT_4O), # If you would like to experiment with other models
-        name="greeting_agent",
+        name="greeting_handler_agent",
         instruction=GREETING_HANDLER_INSTRUCTION,
         description=GREETING_HANDLER_DESCRIPTION,
         tools=[say_hello],
