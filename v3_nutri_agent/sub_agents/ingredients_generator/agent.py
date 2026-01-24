@@ -12,12 +12,22 @@ from config import MODEL_GEMINI_2_5_FLASH
 model = MODEL_GEMINI_2_5_FLASH
 
 
-def before_ingredients_generator_callback(agent, context):
-    """Callback function that prints when the ingredients_generator agent is invoked."""
-    print(f"\n🔵 [INGREDIENTS_GENERATOR] Agent '{agent.name}' has been invoked.")
-    print(f"   Context: {context}")
-    return True  # Return True to allow the agent to proceed
 
+from google.adk.agents.callback_context import CallbackContext
+from google.genai.types import Content
+from typing import Optional
+
+def before_ingredients_generator_callback(callback_context: CallbackContext) -> Optional[Content]:
+    print(f"▶ Entering Agent: {callback_context.agent_name}")
+    print(f" Invocation ID: {callback_context.invocation_id}")
+    # Optional: Log the initial user input if available
+    if callback_context.user_content:
+        print(f" Initial User Input: {callback_context.user_content.parts[0].text}")
+
+    # Returning None allows the agent execution to proceed normally
+    return None
+
+from .schema_and_tools import get_grouped_nutriments_from_open_food_facts
 
 try:
     ingredients_generator_agent = Agent(

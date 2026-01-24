@@ -11,6 +11,23 @@ if project_root not in sys.path:
 from config import MODEL_GEMINI_2_5_FLASH
 
 model = MODEL_GEMINI_2_5_FLASH
+
+
+from google.adk.agents.callback_context import CallbackContext
+from google.genai.types import Content
+from typing import Optional
+
+def before_farewell_handler_callback(callback_context: CallbackContext) -> Optional[Content]:
+    print(f"▶ Entering Agent: {callback_context.agent_name}")
+    print(f" Invocation ID: {callback_context.invocation_id}")
+    # Optional: Log the initial user input if available
+    if callback_context.user_content:
+        print(f" Initial User Input: {callback_context.user_content.parts[0].text}")
+
+    # Returning None allows the agent execution to proceed normally
+    return None
+
+
 try:
     farewell_handler_agent = Agent(
         # Using a potentially different/cheaper model for a simple task
@@ -20,6 +37,7 @@ try:
         instruction=FAREWELL_HANDLER_INSTRUCTION,
         description=FAREWELL_HANDLER_DESCRIPTION,
         tools=[say_goodbye],
+        before_agent_callback=before_farewell_handler_callback,
     )
     print(f"✅ Agent '{farewell_handler_agent.name}' created using model '{farewell_handler_agent.model}'.")
 except Exception as e:

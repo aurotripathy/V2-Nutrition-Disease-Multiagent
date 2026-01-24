@@ -71,11 +71,10 @@ session_stateful = asyncio.run(init_session_with_state())
 from prompts import ORCHESTRATOR_AGENT_FOR_TEAM_INSTRUCTION
 
 # @title Define Greeting and Farewell Sub-Agents
-
 # Import the agents from their modules
 from sub_agents.greeting_handler.agent import greeting_handler_agent 
 from sub_agents.farewell_handler.agent import farewell_handler_agent 
-
+from sub_agents.ingredients_generator.agent import ingredients_generator_agent
 
 # @title Define the Root Agent with Sub-Agents
 
@@ -96,7 +95,7 @@ root_agent = Agent(
     instruction=ORCHESTRATOR_AGENT_FOR_TEAM_INSTRUCTION, # Root agent still needs the weather tool for its core task
     # Key change: Link the sub-agents here!
     # insert before callback to check for quit
-    sub_agents=[greeting_handler_agent, farewell_handler_agent],
+    sub_agents=[greeting_handler_agent, farewell_handler_agent, ingredients_generator_agent],
     output_key="TBD", # <<< Auto-save agent's final response
 )
 print(f"✅ Root Agent '{root_agent.name}' created using TBD.")
@@ -161,7 +160,7 @@ if 'runner_root' in globals() and runner_root:
 
         # 1. Check weather (Uses initial state: Celsius)
         print("--- Query: make a query about a food item and its impact on health ---")
-        await query_agent_async(query= "Is kitkat good for my health?",
+        await query_agent_async(query= "Is the food item kitkat good for my health?",
                                runner=runner_root,
                                user_id=USER_ID_STATEFUL,
                                session_id=SESSION_ID_STATEFUL
