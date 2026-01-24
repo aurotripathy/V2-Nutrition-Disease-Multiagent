@@ -12,7 +12,6 @@ from google.adk.runners import Runner
 from google.genai import types  # For creating message Content/Parts
 
 import warnings
-# Ignore all warnings
 warnings.filterwarnings("ignore")
 
 import logging
@@ -53,19 +52,15 @@ async def init_session_with_state():
         session_id=SESSION_ID_STATEFUL,
         state=initial_state  # <<< Initialize state during creation
     )
-    print(f"✅ Session '{SESSION_ID_STATEFUL}' created for user '{USER_ID_STATEFUL}'.")
 
     # Verify the initial state was set correctly
-    retrieved_session = await session_service_stateful.get_session(
-        app_name=APP_NAME,
-        user_id=USER_ID_STATEFUL,
-        session_id=SESSION_ID_STATEFUL
+    from utils.session import verify_initial_state
+    await verify_initial_state(
+        session_service_stateful,
+        APP_NAME,
+        USER_ID_STATEFUL,
+        SESSION_ID_STATEFUL
     )
-    print("\n--- Initial Session State ---")
-    if retrieved_session:
-        print(retrieved_session.state)
-    else:
-        print("Error: Could not retrieve session.")
     return session_stateful
 
 # Initialize session with state (run async code)
@@ -74,7 +69,6 @@ session_stateful = asyncio.run(init_session_with_state())
 
 # @title Import tools and prompts
 from prompts import ORCHESTRATOR_AGENT_FOR_TEAM_INSTRUCTION
-
 
 # @title Define Greeting and Farewell Sub-Agents
 
@@ -88,7 +82,6 @@ from sub_agents.farewell_handler.agent import farewell_handler_agent
 # Ensure sub-agents were created successfully before defining the root agent.
 # Also ensure the  'get_weather_stateful' tool is defined.
 root_agent = None
-runner_root_stateful = None  # Initialize runner
 
 # Check if function is defined (proper way for imported functions)
 # Method 1: Use callable() - checks if it's a callable object
@@ -120,13 +113,9 @@ print(f"✅ Runner created for stateful root agent '{runner_root.agent.name}' us
 # # @title 4. Interact to Test State Flow and output_key
 import asyncio  # Ensure asyncio is imported
 
-# Ensure the stateful runner (runner_root_stateful) is available from the previous cell
-# Ensure call_agent_async, USER_ID_STATEFUL, SESSION_ID_STATEFUL, APP_NAME are defined
-
-
 
 # Ensure the call_agent_async function is defined.
-async def call_agent_async(query: str, runner, user_id, session_id):
+async def query_agent_async(query: str, runner, user_id, session_id):
     """Sends a query to the agent and prints the final response."""
     print(f"\n>>> User Query: {query}")
 
@@ -154,51 +143,32 @@ async def call_agent_async(query: str, runner, user_id, session_id):
     print(f"<<< Agent Response: {final_response_text}")
 
 
+# Ok, here's where we send a series of queries to the agent and see how it responds.
 # Only define and run if the root agent exists
 if 'runner_root' in globals() and runner_root:
     # Define the main async function for the conversation logic.
     # The 'await' keywords INSIDE this function are necessary for async operations.
     async def run_stateful_conversation():
-        print("\n--- Testing State: Temperature Unit Conversion & output_key ---")
+        print("\n--- Querying State: ---")
+
+         # 1. Check weather (Uses initial state: Celsius)
+        print("--- Query: greeting ---")
+        await query_agent_async(query= "Hello!",
+                               runner=runner_root,
+                               user_id=USER_ID_STATEFUL,
+                               session_id=SESSION_ID_STATEFUL
+                              )
+
         # 1. Check weather (Uses initial state: Celsius)
-        print("--- Turn 1: Requesting weather in London (expect Celsius) ---")
-        await call_agent_async(query= "What's the weather in London?",
+        print("--- Query: make a query about a food item and its impact on health ---")
+        await query_agent_async(query= "Is kitkat good for my health?",
                                runner=runner_root,
                                user_id=USER_ID_STATEFUL,
                                session_id=SESSION_ID_STATEFUL
                               )
 
-        # 2. Manually update state preference to Fahrenheit - DIRECTLY MODIFY STORAGE
-        print("\n--- Manually Updating State: Setting unit to Fahrenheit ---")
-        try:
-            # Access the internal storage directly - THIS IS SPECIFIC TO InMemorySessionService for testing
-            # NOTE: In production with persistent services (Database, VertexAI), you would
-            # typically update state via agent actions or specific service APIs if available,
-            # not by direct manipulation of internal storage.
-            stored_session = session_service_stateful.sessions[APP_NAME][USER_ID_STATEFUL][SESSION_ID_STATEFUL]
-            stored_session.state["user_preference_temperature_unit"] = "Fahrenheit"
-            # Optional: You might want to update the timestamp as well if any logic depends on it
-            # import time
-            # stored_session.last_update_time = time.time()
-            print(f"--- Stored session state updated. Current 'user_preference_temperature_unit': {stored_session.state.get('user_preference_temperature_unit', 'Not Set')} ---") # Added .get for safety
-        except KeyError:
-            print(f"--- Error: Could not retrieve session '{SESSION_ID_STATEFUL}' from internal storage for user '{USER_ID_STATEFUL}' in app '{APP_NAME}' to update state. Check IDs and if session was created. ---")
-        except Exception as e:
-             print(f"--- Error updating internal session state: {e} ---")
-
-        # 3. Check weather again (Tool should now use Fahrenheit)
-        # This will also update 'last_weather_report' via output_key
-        print("\n--- Turn 2: Requesting weather in New York (expect Fahrenheit) ---")
-        await call_agent_async(query= "Tell me the weather in New York.",
-                               runner=runner_root,
-                               user_id=USER_ID_STATEFUL,
-                               session_id=SESSION_ID_STATEFUL
-                              )
-
-        # 4. Test basic delegation (should still work)
-        # This will update 'last_weather_report' again, overwriting the NY weather report
-        print("\n--- Turn 3: Sending a greeting ---")
-        await call_agent_async(query= "Hi!",
+        print("\n--- Turn 3: Sending a farewell greeting ---")
+        await query_agent_async(query= "Bye!",
                                runner=runner_root,
                                user_id=USER_ID_STATEFUL,
                                session_id=SESSION_ID_STATEFUL

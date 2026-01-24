@@ -8,7 +8,7 @@ from config import MODEL_GEMINI_2_5_FLASH
 
 model = MODEL_GEMINI_2_5_FLASH
 
-disease_identifier_agent = LlmAgent(
+disease_analyser_agent = LlmAgent(
     name="DiseaseIdentifier",
     model=model,
     instruction=load_instruction_from_file("disease_identifier_instructions.txt"),
