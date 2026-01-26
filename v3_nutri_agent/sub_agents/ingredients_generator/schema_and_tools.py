@@ -9,7 +9,6 @@ import argparse
 from collections import defaultdict
 import logging
 
-logging.basicConfig(level=logging.INFO)
 
 def get_nutriments_from_open_food_facts(food_item: str) -> dict:
     """
@@ -34,10 +33,15 @@ def get_nutriments_from_open_food_facts(food_item: str) -> dict:
         environment=Environment.net, #staging server, not production
         timeout=10, # looks to be the minimum timeout
     )
+
+    logging.basicConfig(level=logging.DEBUG)
+
+    logging.debug(f"Searching Open Food Facts for {food_item}")
+    print(f"▶ Tool call: Searching Open Food Facts for {food_item}") # cant see this in the logs
     start_time = time.time()
     nutriments = {}
     try:
-        logging.debug(f"Searching Open Food Facts for {food_item}")
+        
         result = api.product.text_search(food_item)  # returns a dict
         # if not result:
         #     logging.debug(f"No result found for {food_item}")
