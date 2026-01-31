@@ -151,27 +151,42 @@ if 'runner_root' in globals() and runner_root:
         print("\n--- Querying State: ---")
 
          # 1. Check weather (Uses initial state: Celsius)
-        print("--- Query: greeting ---")
-        await query_agent_async(query= "Hello!",
-                               runner=runner_root,
-                               user_id=USER_ID_STATEFUL,
-                               session_id=SESSION_ID_STATEFUL
-                              )
+        # print("--- Query: greeting ---")
+        # await query_agent_async(query= "Hello!",
+        #                        runner=runner_root,
+        #                        user_id=USER_ID_STATEFUL,
+        #                        session_id=SESSION_ID_STATEFUL
+        #                       )
 
         # 1. Check weather (Uses initial state: Celsius)
-        print("--- Query: make a query about a food item and its impact on health ---")
-        await query_agent_async(query= "Is the food item kitkat good for my health?",
-                               runner=runner_root,
-                               user_id=USER_ID_STATEFUL,
-                               session_id=SESSION_ID_STATEFUL
-                              )
+        # print("--- Query: make a query about a food item and its impact on health ---")
+        # await query_agent_async(query= "Is kitkat good for my health?",
+        #                        runner=runner_root,
+        #                        user_id=USER_ID_STATEFUL,
+        #                        session_id=SESSION_ID_STATEFUL
+        #                       )
 
-        print("\n--- Turn 3: Sending a farewell greeting ---")
-        await query_agent_async(query= "Bye!",
+         # 1. Check weather (Uses initial state: Celsius)
+        print("--- Query: make a query about a food item and its impact on health ---")
+        await query_agent_async(query= "Is tobacco good for my heart?",
                                runner=runner_root,
                                user_id=USER_ID_STATEFUL,
                                session_id=SESSION_ID_STATEFUL
                               )
+        #  # 1. Check weather (Uses initial state: Celsius)
+        # print("--- Query: make a query about a food item and its impact on health ---")
+        # await query_agent_async(query= "Is candy good for my teeth?",
+        #                        runner=runner_root,
+        #                        user_id=USER_ID_STATEFUL,
+        #                        session_id=SESSION_ID_STATEFUL
+        #                       )                    
+
+        # print("\n--- Turn 3: Sending a farewell greeting ---")
+        # await query_agent_async(query= "Bye!",
+        #                        runner=runner_root,
+        #                        user_id=USER_ID_STATEFUL,
+        #                        session_id=SESSION_ID_STATEFUL
+        #                       )
 
     # --- Execute the `run_stateful_conversation` async function ---
 
