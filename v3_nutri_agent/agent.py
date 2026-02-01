@@ -149,44 +149,31 @@ if 'runner_root' in globals() and runner_root:
     # The 'await' keywords INSIDE this function are necessary for async operations.
     async def run_stateful_conversation():
         print("\n--- Querying State: ---")
-
-         # 1. Check weather (Uses initial state: Celsius)
-        # print("--- Query: greeting ---")
-        # await query_agent_async(query= "Hello!",
-        #                        runner=runner_root,
-        #                        user_id=USER_ID_STATEFUL,
-        #                        session_id=SESSION_ID_STATEFUL
-        #                       )
-
-        # 1. Check weather (Uses initial state: Celsius)
-        # print("--- Query: make a query about a food item and its impact on health ---")
-        # await query_agent_async(query= "Is kitkat good for my health?",
-        #                        runner=runner_root,
-        #                        user_id=USER_ID_STATEFUL,
-        #                        session_id=SESSION_ID_STATEFUL
-        #                       )
-
-         # 1. Check weather (Uses initial state: Celsius)
-        print("--- Query: make a query about a food item and its impact on health ---")
-        await query_agent_async(query= "Is tobacco good for my heart?",
-                               runner=runner_root,
-                               user_id=USER_ID_STATEFUL,
-                               session_id=SESSION_ID_STATEFUL
-                              )
-        #  # 1. Check weather (Uses initial state: Celsius)
-        # print("--- Query: make a query about a food item and its impact on health ---")
-        # await query_agent_async(query= "Is candy good for my teeth?",
-        #                        runner=runner_root,
-        #                        user_id=USER_ID_STATEFUL,
-        #                        session_id=SESSION_ID_STATEFUL
-        #                       )                    
-
-        # print("\n--- Turn 3: Sending a farewell greeting ---")
-        # await query_agent_async(query= "Bye!",
-        #                        runner=runner_root,
-        #                        user_id=USER_ID_STATEFUL,
-        #                        session_id=SESSION_ID_STATEFUL
-        #                       )
+        
+        # Read queries from queries.txt file
+        queries_file = os.path.join(os.path.dirname(__file__), 'queries.txt')
+        queries = []
+        try:
+            with open(queries_file, 'r') as f:
+                for line in f:
+                    query = line.strip()
+                    if query:  # Skip empty lines
+                        queries.append(query)
+            print(f"✅ Loaded {len(queries)} queries from queries.txt")
+        except FileNotFoundError:
+            print(f"⚠️ Warning: queries.txt not found. Using empty query list.")
+        except Exception as e:
+            print(f"⚠️ Error reading queries.txt: {e}")
+        
+        # Loop through queries and execute them
+        for i, query in enumerate(queries, 1):
+            print(f"\n--- Query {i}/{len(queries)}: {query[:50]}... ---" if len(query) > 50 else f"\n--- Query {i}/{len(queries)}: {query} ---")
+            await query_agent_async(
+                query=query,
+                runner=runner_root,
+                user_id=USER_ID_STATEFUL,
+                session_id=SESSION_ID_STATEFUL
+            )
 
     # --- Execute the `run_stateful_conversation` async function ---
 
