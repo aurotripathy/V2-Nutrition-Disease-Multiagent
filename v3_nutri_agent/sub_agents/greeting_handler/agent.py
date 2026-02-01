@@ -7,13 +7,13 @@ import os
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-from config import MODEL_GEMINI_2_5_FLASH
+from config import GEMINI_MODEL
 
-model = MODEL_GEMINI_2_5_FLASH
+model = GEMINI_MODEL
 try:
     greeting_handler_agent = Agent(
         # Using a potentially different/cheaper model for a simple task
-        model = MODEL_GEMINI_2_5_FLASH,
+        model = GEMINI_MODEL,
         # model=LiteLlm(model=MODEL_GPT_4O), # If you would like to experiment with other models
         name="greeting_handler_agent",
         instruction=GREETING_HANDLER_INSTRUCTION,

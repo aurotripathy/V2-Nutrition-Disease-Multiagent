@@ -10,9 +10,9 @@ from .prompts import DISEASE_ANALYSER_SEARCH_AGENT_INSTRUCTIONS, DISEASE_ANALYSE
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
-from config import MODEL_GEMINI_2_5_FLASH
+from config import GEMINI_MODEL
 
-model = MODEL_GEMINI_2_5_FLASH
+model = GEMINI_MODEL
 
 from google.adk.agents.callback_context import CallbackContext
 from google.genai.types import Content

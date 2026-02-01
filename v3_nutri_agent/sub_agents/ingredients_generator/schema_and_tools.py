@@ -21,7 +21,7 @@ def get_nutriments_from_open_food_facts(food_item: str) -> dict:
         Returns:
             A dictionary of nutriments for the food item, or an empty dictionary if no nutriments are found.
         """
-    print(f"--- Tool call: Getting nutriments for {food_item} from Open Food Facts ---")
+    print(f"[🔧C] Toolcall: Getting nutriments for {food_item} from Open Food Facts ---")
 
     api = API(
         user_agent="MyAwesomeApp/1.0",

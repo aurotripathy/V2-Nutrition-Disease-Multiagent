@@ -24,9 +24,9 @@ from utils.environment import load_environment
 load_environment()
 
 # Import model constants
-from config import MODEL_GEMINI_2_5_FLASH
+from config import GEMINI_MODEL
 
-print(f"Model selected: {MODEL_GEMINI_2_5_FLASH}.")
+print(f"Model selected: {GEMINI_MODEL}.")
 
 
 session_service_stateful = InMemorySessionService()
@@ -86,7 +86,7 @@ root_agent = None
 # Method 1: Use callable() - checks if it's a callable object
 
 
-root_agent_model = MODEL_GEMINI_2_5_FLASH
+root_agent_model = GEMINI_MODEL
 
 root_agent = Agent(
     name="orchestrator_agent",
