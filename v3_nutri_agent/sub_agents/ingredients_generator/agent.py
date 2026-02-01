@@ -3,6 +3,7 @@ from .schema_and_tools import get_grouped_nutriments_from_open_food_facts
 from google.adk.tools.google_search_tool import GoogleSearchTool
 from google.adk.tools.agent_tool import AgentTool
 from .prompts import INGREDIENTS_GENERATOR_INSTRUCTIONS, INGREDIENTS_GENERATOR_DESCRIPTION
+from .prompts import SEARCH_AGENT_INSTRUCTIONS, SEARCH_AGENT_DESCRIPTION
 import sys
 import os
 # Add project root to path for config import
@@ -12,7 +13,7 @@ if project_root not in sys.path:
 from config import MODEL_GEMINI_2_5_FLASH
 
 model = MODEL_GEMINI_2_5_FLASH
-
+google_search_tool = GoogleSearchTool(bypass_multi_tools_limit=True)
 
 
 from google.adk.agents.callback_context import CallbackContext
@@ -22,12 +23,12 @@ from google.genai.types import Content
 from typing import Optional, Dict, Any
 
 def before_ingredients_generator_callback(callback_context: CallbackContext) -> Optional[Content]:
-    print(f"▶ Entering Agent: {callback_context.agent_name}")
+    print(f"[B🤖CB]▶ Before_agent_callback triggered for agent: {callback_context.agent_name}")
     # print(f" Invocation ID: {callback_context.invocation_id}")
     # Optional: Log the initial user input if available
     if callback_context.user_content:
         print(f" Initial User Input: {callback_context.user_content.parts[0].text}")
-
+    
     # Returning None allows the agent execution to proceed normally
     return None
 
@@ -46,7 +47,7 @@ def before_ingredients_generator_tool_callback(
         None: Proceed with normal tool execution.
         Dict: Skip execution and return this result instead.
     """
-    print(f"[🔧] Before_tool_callback triggered for tool: {tool.name}, args: {args} Tool Context - Agent Name: {tool_context.agent_name}")
+    print(f"[B🔧CB] Before_tool_callback triggered for tool: {tool.name}, args: {args} Tool Context - Agent Name: {tool_context.agent_name}")
     # print(f"   Tool Context - Invocation ID: {tool_context.invocation_id}")
     
     # Print user content if available
@@ -94,7 +95,9 @@ def after_ingredients_generator_tool_callback(
         None: Use the tool's actual result.
         Dict: Override the result with this value instead.
     """
-    print(f"[T] After_tool_callback triggered for tool: {tool.name}")
+    print(f"[A🔧BC] After_tool_callback triggered for tool: {tool.name} in agent: {tool_context.agent_name}")
+
+    tool_context.state['ingredients_list_and_ailment'] = tool_response
     
     # Check if this is the OFF API tool call
     if tool.name == "get_grouped_nutriments_from_open_food_facts":
@@ -125,9 +128,21 @@ def after_ingredients_generator_tool_callback(
 
 # --- 2. Create a fallback function that the LLM can call if the first one fails ---
 # We can just use the pre-built GoogleSearchTool directly as a function
-google_search_tool = GoogleSearchTool(bypass_multi_tools_limit=True)
+
+
+### The Search Agent
+from google.adk.tools import google_search
+search_ingredients_agent = Agent(
+  name="search_ingredients_agent",
+  model=model,    # --> Apply flash model for fast application and minimize token usage
+  description="To do the actual search and analysis for ingredients based on food_item",
+  tools=[google_search],
+  instruction=SEARCH_AGENT_INSTRUCTIONS,
+  output_key="search_results",
+)
+
 from .schema_and_tools import get_grouped_nutriments_from_open_food_facts
-from ..disease_analyser.agent import disease_analyser_agent
+from .sub_agents.disease_analyser.agent import disease_analyser_agent
 
 try:
     ingredients_generator_agent = Agent(
@@ -135,14 +150,13 @@ try:
         model=model,
         instruction=INGREDIENTS_GENERATOR_INSTRUCTIONS,
         description=INGREDIENTS_GENERATOR_DESCRIPTION,
-        tools=[get_grouped_nutriments_from_open_food_facts, 
-            google_search_tool],
-            # AgentTool(agent=disease_analyser_agent)],
+        tools=[get_grouped_nutriments_from_open_food_facts,  AgentTool(agent=search_ingredients_agent)],
         before_tool_callback=before_ingredients_generator_tool_callback,
         after_tool_callback=after_ingredients_generator_tool_callback,
         output_key="ingredients_list_and_ailment",  # Save result to state
         before_agent_callback=[before_ingredients_generator_callback],
         disallow_transfer_to_parent=True,
+        sub_agents=[disease_analyser_agent],
     )
     print(f"✅ Agent '{ingredients_generator_agent.name}' created using model '{ingredients_generator_agent.model}'.")
 except Exception as e:
