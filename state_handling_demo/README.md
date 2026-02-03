@@ -32,3 +32,5 @@ Run the demo:
 ```bash
 python agent.py
 ```
+#### Note
+Gratitude: some of the ideas came from https://arjunprabhulal.com/adk-sessions-state/
