@@ -22,7 +22,7 @@ from google.adk.tools.tool_context import ToolContext
 from google.genai.types import Content
 from typing import Optional, Dict, Any
 
-def before_ingredients_generator_callback(callback_context: CallbackContext) -> Optional[Content]:
+def before_ingredients_generator_agent_callback(callback_context: CallbackContext) -> Optional[Content]:
     print(f"[B🤖CB]▶ Before_agent_callback triggered for agent: {callback_context.agent_name}")
     # print(f" Invocation ID: {callback_context.invocation_id}")
     # Optional: Log the initial user input if available
@@ -32,6 +32,41 @@ def before_ingredients_generator_callback(callback_context: CallbackContext) -> 
     # Returning None allows the agent execution to proceed normally
     return None
 
+
+def after_ingredients_generator_agent_callback(callback_context: CallbackContext) -> Optional[Content]:
+    global _temp_ingredients_data
+    
+    print(f"[A🤖CB]▶ After_agent_callback triggered for agent: {callback_context.agent_name}")
+    # print(f" Invocation ID: {callback_context.invocation_id}")
+    # Optional: Log the initial user input if available
+    if callback_context.user_content:
+        print(f" Initial User Input: {callback_context.user_content.parts[0].text}")
+    
+    # Ensure ingredients_list_and_ailment is in session state
+    session_state = callback_context.session.state
+    
+    # If we have temporary data from tool callback, save it to session state
+    if _temp_ingredients_data is not None:
+        session_state['ingredients_list_and_ailment'] = _temp_ingredients_data
+        print(f"[A🤖CB] ✅ Saved ingredients_list_and_ailment from tool callback to session state")
+        _temp_ingredients_data = None  # Clear after saving
+    
+    # Check if ingredients_list_and_ailment is in session state (either from output_key or tool callback)
+    if 'ingredients_list_and_ailment' in session_state:
+        data = session_state.get('ingredients_list_and_ailment')
+        print(f"[A🤖CB] ✅ ingredients_list_and_ailment found in session state")
+        print(f"[A🤖CB] Data type: {type(data)}")
+        if isinstance(data, dict):
+            print(f"[A🤖CB] Data keys: {list(data.keys()) if data else 'empty dict'}")
+        else:
+            print(f"[A🤖CB] Data preview: {str(data)[:100]}...")
+    else:
+        print(f"[A🤖CB] ⚠️ ingredients_list_and_ailment NOT found in session state")
+        # The output_key should have saved the agent's final response
+        # If it's not there, the agent might not have returned the ingredients data
+    
+    # Returning None allows the agent execution to proceed normally
+    return None
 
 def before_ingredients_generator_tool_callback(
     tool: BaseTool,
@@ -48,37 +83,11 @@ def before_ingredients_generator_tool_callback(
         Dict: Skip execution and return this result instead.
     """
     print(f"[B🔧CB] Before_tool_callback triggered for tool: {tool.name}, args: {args} Tool Context - Agent Name: {tool_context.agent_name}")
-    # print(f"   Tool Context - Invocation ID: {tool_context.invocation_id}")
-    
-    # Print user content if available
-    # if tool_context.user_content:
-    #     print(f"   Tool Context - User Content:")
-    #     if tool_context.user_content.parts:
-    #         for i, part in enumerate(tool_context.user_content.parts):
-    #             print(f"     Part {i}: {part.text if hasattr(part, 'text') else part}")
-    
-    # Print all available attributes in tool_context
-    # print(f"   Available attributes in tool_context:")
-    # for attr in dir(tool_context):
-    #     if not attr.startswith('_'):
-    #         try:
-    #             value = getattr(tool_context, attr)
-    #             if not callable(value):
-    #                 print(f"     {attr}: {value}")
-    #         except Exception:
-    #             pass
-    
-    # Example guardrail: You can add business logic here
-    # if tool.name == "get_grouped_nutriments_from_open_food_facts" and args.get("food_item", "").lower() == "restricted_item":
-    #     print("🚫 Guardrail activated: Blocking tool call for restricted item.")
-    #     return {
-    #         "status": "error",
-    #         "message": "Policy violation: This item is restricted."
-    #     }
-    
-    # Return None to allow the normal tool function to execute
     return None
 
+
+# Module-level variable to temporarily store tool response for saving to session state
+_temp_ingredients_data = None
 
 def after_ingredients_generator_tool_callback(
     tool: BaseTool,
@@ -95,9 +104,14 @@ def after_ingredients_generator_tool_callback(
         None: Use the tool's actual result.
         Dict: Override the result with this value instead.
     """
-    print(f"[A🔧BC] After_tool_callback triggered for tool: {tool.name} in agent: {tool_context.agent_name}")
+    global _temp_ingredients_data
+    
+    # print(f"[A🔧CB] After_tool_callback triggered for tool: {tool.name} in agent: {tool_context.agent_name}")
+    print(f"[A🔧CB] After_tool_callback triggered for tool: {tool.name}, args: {args} Tool Context - Agent Name: {tool_context.agent_name}")
 
-    tool_context.state['ingredients_list_and_ailment'] = tool_response
+    print(f"[A🔧CB] Tool response: {tool_response}")
+    print(f"Tool response type: {type(tool_response)}")
+    print(f"Tool response is None: {tool_response is None}")
     
     # Check if this is the OFF API tool call
     if tool.name == "get_grouped_nutriments_from_open_food_facts":
@@ -108,13 +122,20 @@ def after_ingredients_generator_tool_callback(
         if isinstance(tool_response, dict):
             if not tool_response:
                 print("[T] [OFF API OUTPUT] Result: Empty dictionary (no nutriments found)")
+                _temp_ingredients_data = None
             else:
+                # Store the data temporarily and save to state
+                _temp_ingredients_data = tool_response
+                # In Google ADK, tool_context.state IS the session state
+                tool_context.state['ingredients_list_and_ailment'] = tool_response
                 print(f"[T] [OFF API OUTPUT] Result: Found {len(tool_response)} nutrient groups")
+                print(f">>> ✅ Saved ingredients_list_and_ailment to state: {bool(tool_response)}")
                 print("[T] [OFF API OUTPUT] Nutrient groups:")
                 for nutrient_name, nutrient_data in tool_response.items():
                     print(f"   - {nutrient_name}: {nutrient_data}")
         else:
             print(f"[T] [OFF API OUTPUT] Result: {tool_response}")
+            _temp_ingredients_data = tool_response if tool_response else None
     else:
         # For other tools, just print a summary
         print(f"[T] [TOOL OUTPUT] Tool '{tool.name}' returned: {type(tool_response)}")
@@ -124,7 +145,7 @@ def after_ingredients_generator_tool_callback(
             print(f"   Result preview: {tool_response[:200]}..." if len(str(tool_response)) > 200 else f"   Result: {tool_response}")
     
     # Return None to use the tool's actual result
-    return None
+    return tool_response
 
 # --- 2. Create a fallback function that the LLM can call if the first one fails ---
 # We can just use the pre-built GoogleSearchTool directly as a function
@@ -138,8 +159,15 @@ search_ingredients_agent = Agent(
   description="To do the actual search and analysis for ingredients based on food_item",
   tools=[google_search],
   instruction=SEARCH_AGENT_INSTRUCTIONS,
-  output_key="search_results",
+#   output_key="search_results",
 )
+
+def remember_ingredients_list_and_ailment(ingredients_list_and_ailment: dict, tool_context: ToolContext) -> dict:
+    """Remember the ingredients list and ailment in state."""
+    state = tool_context.state
+    state["ingredients_list_and_ailment"] = ingredients_list_and_ailment
+    print(f"[🔧C] Toolcall: Remembered ingredients list and ailment: {state.get('ingredients_list_and_ailment')}")
+    return
 
 from .schema_and_tools import get_grouped_nutriments_from_open_food_facts
 from .sub_agents.disease_analyser.agent import disease_analyser_agent
@@ -150,11 +178,14 @@ try:
         model=model,
         instruction=INGREDIENTS_GENERATOR_INSTRUCTIONS,
         description=INGREDIENTS_GENERATOR_DESCRIPTION,
-        tools=[get_grouped_nutriments_from_open_food_facts,  AgentTool(agent=search_ingredients_agent)],
+        tools=[get_grouped_nutriments_from_open_food_facts,  
+            # AgentTool(agent=search_ingredients_agent)
+        ],
         before_tool_callback=before_ingredients_generator_tool_callback,
         after_tool_callback=after_ingredients_generator_tool_callback,
-        output_key="ingredients_list_and_ailment",  # Save result to state
-        before_agent_callback=[before_ingredients_generator_callback],
+        output_key="ingredients_list_and_ailment",  # Save agent's final output to session state
+        before_agent_callback=[before_ingredients_generator_agent_callback],
+        after_agent_callback=[after_ingredients_generator_agent_callback],
         disallow_transfer_to_parent=True,
         sub_agents=[disease_analyser_agent],
     )
