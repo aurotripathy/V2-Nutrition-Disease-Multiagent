@@ -11,7 +11,7 @@ ORCHESTRATOR_AGENT_FOR_TEAM_INSTRUCTION ="""
     Your task is to analyze the user's query and delegate to the appropriate sub-agent. 
     - If the query is a greeting, delegate to 'greeting_handler_agent'. 
     - If the query is a farewell, delegate to 'farewell_handler_agent'.
-    - If the query is a food item or any ingestible item and optionally its impact on health, delegate the query to 'ingredients_generator_agent'. 
+    - If the query is about a food item or an ingestible item and, optionally, about its impact on health, delegate the query to 'ingredients_generator_agent'. 
 
     For everything else, state you cannot handle the query and ask the user to rephrase the query.
 """
