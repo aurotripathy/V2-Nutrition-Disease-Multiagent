@@ -15,11 +15,12 @@ You have been provided with the ingredients list and optional ailment/disease in
 
 {INGREDIENTS_DATA}
 
-If the ailment field is populated (not empty or NA, meaning Not Applicable), stick to your research on that ailment.
+If the disease or ailment field is populated (not empty or None), stick to your research on that disease or ailment.
 You must use the 'google_search_tool' built-in tool to find the diseases or health issues stemming from consuming the ingredients in the list provided.
 
 **Output**
-     The output is a dictionary of the diseases or health issues stemming from consuming the ingredients in the list provided.
+     The output is a dictionary of the diseases or health issues stemming from consuming the ingredients in the ingredients data provided.
+     Format: {"diseases": {...disease_data...}}
 """
 
 def get_disease_analyser_instruction(callback_context: CallbackContext) -> str:
@@ -31,17 +32,19 @@ def get_disease_analyser_instruction(callback_context: CallbackContext) -> str:
     ingredients_data = callback_context.session.state.get('ingredients_list_and_ailment')
    
     if ingredients_data:
-        print(f"[✨PROMPT] Disease Analyser: Ingredients data assimilated into the prompt from the parent agent:\n```json\n{json.dumps(ingredients_data, indent=2)}\n```")
+       
         # Format the ingredients data for the instruction
         if isinstance(ingredients_data, dict):
             ingredients_text = "**Ingredients List and Ailment Data:**\n"
             ingredients_text += f"```json\n{json.dumps(ingredients_data, indent=2)}\n```"
         else:
+            print(f"[PROMPT] Disease Analyser: Ingredients List and Ailment data from the parent agent is not a dictionary. It is a string:\n{ingredients_data}")
             ingredients_text = f"**Ingredients List and Ailment Data:**\n{ingredients_data}"
     else:
         ingredients_text = "**WARNING:** No ingredients list found in state. The parent agent may not have provided the data yet."
     
     # Inject the ingredients data into the template
+    print(f"[✨PROMPT] Disease Analyser: Ingredients dictionary/list assimilated from the parent agent into the prompt:\n```json\n{json.dumps(ingredients_data, indent=2)}\n```")
     instruction = DISEASE_ANALYSER_INSTRUCTIONS_TEMPLATE.replace("{INGREDIENTS_DATA}", ingredients_text)
     
     return instruction
@@ -52,6 +55,7 @@ DISEASE_ANALYSER_INSTRUCTIONS = DISEASE_ANALYSER_INSTRUCTIONS_TEMPLATE
 DISEASE_ANALYSER_DESCRIPTION = """
 Searches for diseases or health issues stemming from consuming the ingredients in the list provided.
 """
+
 DISEASE_ANALYSER_SEARCH_AGENT_INSTRUCTIONS_TEMPLATE = """
 **Your Core Identity and Sole Purpose:**
    You are a specialized disease search assistant.
@@ -74,6 +78,21 @@ def get_disease_analyser_search_agent_instruction(callback_context: CallbackCont
     
     # Get the ingredients list from session state
     ingredients_data = callback_context.session.state.get('ingredients_list_and_ailment')
+    print(f"[✨PROMPT] In state of get_disease_analyser_search_agent_instruction: {ingredients_data}")
+    print(f"[✨PROMPT] [STATE DEBUG] Session state keys check: 'ingredients_list_and_ailment' in state = {'ingredients_list_and_ailment' in callback_context.session.state}")
+    print(f"[✨PROMPT] [STATE DEBUG] Session state object ID: {id(callback_context.session.state)}")
+    print(f"[✨PROMPT] [STATE DEBUG] Session state type: {type(callback_context.session.state)}")
+    
+    # Try to get from invocation context if available
+    if hasattr(callback_context, 'invocation_context'):
+        inv_state = callback_context.invocation_context.session.state if hasattr(callback_context.invocation_context, 'session') else None
+        if inv_state:
+            inv_data = inv_state.get('ingredients_list_and_ailment')
+            print(f"[✨PROMPT] [STATE DEBUG] Invocation context state has data: {inv_data is not None}")
+            if inv_data and not ingredients_data:
+                ingredients_data = inv_data
+                print(f"[✨PROMPT] [STATE DEBUG] Using data from invocation context state")
+    # print(f"[✨PROMPT] Disease Analyser Search Agent: Ingredients list and ailment data from the parent agent:\n```json\n{json.dumps(ingredients_data, indent=2)}\n```")
     
     if ingredients_data:
         # Inject ALL ingredients if it's a dict
@@ -90,6 +109,7 @@ def get_disease_analyser_search_agent_instruction(callback_context: CallbackCont
         ingredients_text = "**WARNING:** No ingredients list found in state. The parent agent may not have provided the data yet."
     
     # Inject the ingredients data into the template
+    print(f"[✨PROMPT] Disease Analyser Search Agent: Ingredients list and ailment data injected into the prompt:\n```json\n{json.dumps(ingredients_data, indent=2)}\n```")
     instruction = DISEASE_ANALYSER_SEARCH_AGENT_INSTRUCTIONS_TEMPLATE.replace("{INGREDIENTS_DATA}", ingredients_text)
     
     return instruction
