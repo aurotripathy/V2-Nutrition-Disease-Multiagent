@@ -21,7 +21,7 @@ from typing import Optional
 from google.adk.agents.invocation_context import InvocationContext
 
 def before_disease_analyser_agent_callback(callback_context: CallbackContext) -> Optional[Content]:
-    print(f"[Bf🤖CB]▶ Before_agent_callback triggered for agent: {callback_context.agent_name}")
+    print(f"[Bf🤖CB] Before_agent_callback triggered for agent: {callback_context.agent_name}")
     # print(f" Invocation ID: {callback_context.invocation_id}")
     # Optional: Log the initial user input if available
     print(f" <<< Ingredients list and ailment: {callback_context.session.state.get('ingredients_list_and_ailment')}")
@@ -70,7 +70,7 @@ def before_disease_analyser_tool_callback(
 from google.adk.tools import google_search
 import json
 
-def before_search_for_diseases_agent_callback(callback_context: CallbackContext) -> Optional[Content]:
+def before_agent_callback_search_for_diseases_agent(callback_context: CallbackContext) -> Optional[Content]:
     """Callback to verify session state is accessible to search_for_diseases_agent."""
     print(f"[Bf🤖CB] Before_agent_callback triggered for agent: {callback_context.agent_name}")
     
@@ -78,27 +78,54 @@ def before_search_for_diseases_agent_callback(callback_context: CallbackContext)
     session_state = callback_context.session.state
     ingredients_data = session_state.get('ingredients_list_and_ailment')
 
-    print(f"[Bf🤖CB] Ingredients brought in by the parent agent for analysis:\n```json\n{json.dumps(ingredients_data, indent=2)}\n```")
+    print(f"[Bf🤖CB] Ingredients brought in to the disease analyser agent for analysis:\n```json\n{json.dumps(ingredients_data, indent=2)}\n```")
     
     if callback_context.user_content:
         print(f"[Bf🤖CB] User content/input to search_for_diseases_agent: {callback_context.user_content.parts[0].text}")
     
     return None
 
-def before_search_for_diseases_tool_callback(
+def before_tool_callback_search_for_diseases_agent(
     tool: BaseTool,
     args: Dict[str, Any],
     tool_context: ToolContext,
 ) -> Optional[Dict]:
-    """Callback to print and validate what goes into the search tool."""
+    """Callback to print and validate what goes into the search tool, and inject ingredients."""
     print(f"[Bf🔍🔧CB] Before_tool_callback triggered for tool: {tool.name} in agent: {tool_context.agent_name}")
+    
+    # Get ingredients from session state
+    ingredients_data = None
+    if hasattr(tool_context, 'session') and tool_context.session:
+        ingredients_data = tool_context.session.state.get('ingredients_list_and_ailment')
+    else:
+        ingredients_data = tool_context.state.get('ingredients_list_and_ailment')
+    
+    # Extract ingredient names from the ingredients_data dict
+    ingredient_names = []
+    if ingredients_data and isinstance(ingredients_data, dict):
+        ingredient_names = list(ingredients_data.keys())
+        print(f"[Bf🔍🔧CB] Found {len(ingredient_names)} ingredients in session state")
     
     # Print the actual search query with validation
     if 'query' in args:
         query = args['query']
         print(f"[Bf🔍🔧CB] ========================================")
-        print(f"[Bf🔍🔧CB] ACTUAL SEARCH QUERY:")
+        print(f"[Bf🔍🔧CB] ORIGINAL SEARCH QUERY:")
         print(f"[Bf🔍🔧CB] {query}")
+        
+        # Inject ingredients into the search query
+        if ingredient_names:
+            # Create a string of ingredient names
+            ingredients_str = ", ".join(ingredient_names)
+            # Append to the query
+            enhanced_query = f"{query} {ingredients_str}"
+            print(f"[Bf🔍🔧CB] ENHANCED SEARCH QUERY (with ingredients):")
+            print(f"[Bf🔍🔧CB] {enhanced_query}")
+            args['query'] = enhanced_query
+            query = enhanced_query  # Update for validation below
+        else:
+            print(f"[Bf🔍🔧CB] ⚠️ No ingredients found in session state - using original query")
+        
         print(f"[Bf🔍🔧CB] Query length: {len(query)} characters")
         print(f"[Bf🔍🔧CB] Query type: {type(query)}")
         
@@ -126,7 +153,7 @@ def before_search_for_diseases_tool_callback(
     
     return None  # Return None to proceed with the call (with potentially modified args)
 
-def after_search_for_diseases_tool_callback(
+def after_tool_callback_search_for_diseases_agent(
     tool: BaseTool,
     args: Dict[str, Any],
     tool_response: Any,
@@ -180,33 +207,18 @@ search_for_diseases_agent = Agent(
   tools=[google_search],
   description="To do the actual search and analysis for diseases or health issues stemming from consuming the ingredients in the list provided",
   instruction=get_disease_analyser_search_agent_instruction,  # Use dynamic instruction function
-  before_agent_callback=[before_search_for_diseases_agent_callback],  # Add callback to verify session state access
-  before_tool_callback=[before_search_for_diseases_tool_callback],  # Print and validate what goes into the search tool
-  after_tool_callback=[after_search_for_diseases_tool_callback],  # Handle errors from the search tool
+  before_agent_callback=[before_agent_callback_search_for_diseases_agent],  # Add callback to verify session state access
+  before_tool_callback=[before_tool_callback_search_for_diseases_agent],  # Print and validate what goes into the search tool
+  after_tool_callback=[after_tool_callback_search_for_diseases_agent],  # Handle errors from the search tool
   output_key="search_results",
 )
-
-def get_ingredients_list_and_ailment(tool_context: ToolContext) -> Optional[Dict]:
-    # Try to get from session state first (shared state)
-    ingredients_data = None
-    if hasattr(tool_context, 'session') and tool_context.session:
-        ingredients_data = tool_context.session.state.get('ingredients_list_and_ailment')
-        print(f"[🔧C] Toolcall: Getting ingredients list from SESSION state: {ingredients_data}")
-    else:
-        # Fallback to tool_context.state (agent-local)
-        ingredients_data = tool_context.state.get('ingredients_list_and_ailment')
-        print(f"[🔧C] Toolcall: Getting ingredients list from tool context state: {ingredients_data}")
-    # as a check, print the tool context state
-    print(f"[🔧C] Toolcall: Tool context state: {tool_context.state}")
-
-    return ingredients_data
 
 disease_analyser_agent = Agent(
     name="disease_analyser_agent",
     model=model,
-    tools=[AgentTool(agent=search_for_diseases_agent), get_ingredients_list_and_ailment],
+    tools=[AgentTool(agent=search_for_diseases_agent)],
     before_agent_callback=[before_disease_analyser_agent_callback],
-    before_tool_callback=[before_disease_analyser_tool_callback],
+    before_tool_callback=[before_disease_analyser_tool_callback], # Print and validate what goes into the search tool, and inject ingredients
     instruction=get_disease_analyser_instruction,  # Use dynamic instruction function
     description=DISEASE_ANALYSER_DESCRIPTION,
 )
