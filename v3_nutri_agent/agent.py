@@ -139,7 +139,7 @@ async def query_agent_async(query: str, runner, user_id, session_id):
             # Add more checks here if needed (e.g., specific error codes)
             break  # Stop processing events once the final response is found
 
-    print(f"<<< Agent Response: {final_response_text}")
+    print(f"<<< Final Agent Response: {final_response_text}")
 
 
 # Ok, here's where we send a series of queries to the agent and see how it responds.
