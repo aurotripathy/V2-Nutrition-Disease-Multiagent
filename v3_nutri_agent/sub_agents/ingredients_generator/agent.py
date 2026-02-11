@@ -22,7 +22,7 @@ from google.adk.tools.tool_context import ToolContext
 from google.genai.types import Content
 from typing import Optional, Dict, Any
 
-def before_ingredients_generator_agent_callback(callback_context: CallbackContext) -> Optional[Content]:
+def before_agent_callback_ingredients_generator_agent(callback_context: CallbackContext) -> Optional[Content]:
     print(f"[Bf🤖CB] Before_agent_callback triggered for agent: {callback_context.agent_name}")
     # print(f" Invocation ID: {callback_context.invocation_id}")
     # Optional: Log the initial user input if available
@@ -33,7 +33,7 @@ def before_ingredients_generator_agent_callback(callback_context: CallbackContex
     return None
 
 
-def after_ingredients_generator_agent_callback(callback_context: CallbackContext) -> Optional[Content]:
+def after_agent_callback_ingredients_generator_agent(callback_context: CallbackContext) -> Optional[Content]:
     print(f"[Af🤖CB] After_agent_callback triggered for agent: {callback_context.agent_name}")
     # print(f" Invocation ID: {callback_context.invocation_id}")
     # Optional: Log the initial user input if available
@@ -58,7 +58,7 @@ def after_ingredients_generator_agent_callback(callback_context: CallbackContext
     # Returning None allows the agent execution to proceed normally
     return None
 
-def before_ingredients_generator_tool_callback(
+def before_tool_callback_ingredients_generator_agent(
     tool: BaseTool,
     args: Dict[str, Any],
     tool_context: ToolContext
@@ -76,7 +76,7 @@ def before_ingredients_generator_tool_callback(
     return None
 
 
-def after_ingredients_generator_tool_callback(
+def after_tool_callback_ingredients_generator_agent(
     tool: BaseTool,
     args: Dict[str, Any],
     tool_response: Any,
@@ -148,7 +148,7 @@ def after_ingredients_generator_tool_callback(
 ### 🤖🔍 The Search Agent
 from google.adk.tools import google_search
 
-def after_search_ingredients_agent_callback(callback_context: CallbackContext) -> Optional[Content]:
+def after_agent_callback_search_ingredients_agent(callback_context: CallbackContext) -> Optional[Content]:
     """
     Callback function that handles the output after search_ingredients_agent completes.
     
@@ -171,7 +171,7 @@ def after_search_ingredients_agent_callback(callback_context: CallbackContext) -
     
     return None
 
-def after_search_ingredients_agent_tool_callback(
+def after_tool_callback_search_ingredients_agent(
     tool: BaseTool,
     args: Dict[str, Any],
     tool_response: Any,
@@ -211,8 +211,8 @@ search_ingredients_agent = Agent(
   description="To do the actual search and analysis for ingredients based on food_item",
   tools=[google_search],
   instruction=SEARCH_AGENT_INSTRUCTIONS,
-  after_agent_callback=[after_search_ingredients_agent_callback],
-  after_tool_callback=[after_search_ingredients_agent_tool_callback],
+  after_agent_callback=[after_agent_callback_search_ingredients_agent],
+  after_tool_callback=[after_tool_callback_search_ingredients_agent],
 #   output_key="search_results",
 )
 
@@ -230,11 +230,11 @@ try:
         tools=[get_grouped_nutriments_from_open_food_facts,  
             AgentTool(agent=search_ingredients_agent)
         ],
-        before_tool_callback=before_ingredients_generator_tool_callback,
-        after_tool_callback=after_ingredients_generator_tool_callback,
+        before_tool_callback=before_tool_callback_ingredients_generator_agent,
+        after_tool_callback=after_tool_callback_ingredients_generator_agent,
         output_key="ingredients_list_and_ailment",  # Save agent's final output to session state
-        before_agent_callback=[before_ingredients_generator_agent_callback],
-        after_agent_callback=[after_ingredients_generator_agent_callback],
+        before_agent_callback=[before_agent_callback_ingredients_generator_agent],
+        after_agent_callback=[after_agent_callback_ingredients_generator_agent],
         disallow_transfer_to_parent=True,
         sub_agents=[disease_analyser_agent],
     )
