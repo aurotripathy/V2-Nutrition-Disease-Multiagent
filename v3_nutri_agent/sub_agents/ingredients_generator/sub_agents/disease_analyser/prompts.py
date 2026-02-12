@@ -11,21 +11,22 @@ DISEASE_ANALYSER_INSTRUCTIONS_TEMPLATE = """
     For off-topic requests, respond with the exact phrase: "Sorry, I can only respond to food ingredients and optionally, a disease or ailment. I haven't been provided with the data to respond to your query."
 
 **Required Sequence and Workflow:**
-You have been provided with the ingredients list and optional ailment/disease information from the parent agent (ingredients_generator).
+    You have been provided with the ingredients list and, optionally, a disease or ailment information from the parent agent (ingredients_generator).
 
-{INGREDIENTS_DATA}
+    {INGREDIENTS_DATA}
 
-If the disease or ailment field is populated (not empty or None), stick to your research on that disease or ailment.
-You MUST use the agent tool, 'search_for_diseases_agent' to find the diseases or health issues stemming from consuming the ingredients in the list provided.
-You MUST call the `before_tool_callback_search_for_diseases_agent` callback before calling the 'search_for_diseases_agent' tool.
-You MUST call the `after_tool_callback_search_for_diseases_agent` callback after calling the 'search_for_diseases_agent' tool.
+    If the disease or ailment field is populated (not empty or None), stick to your research on that disease or ailment.
+    You MUST use the AgentTool, 'search_for_diseases_agent' to find the diseases or health issues stemming from consuming the ingredients in the list provided.
+    **CRITICAL: When calling 'search_for_diseases_agent', you MUST include ALL ingredients from the ingredients list in your request. Do NOT omit any ingredients.**
+    You MUST call the `before_tool_callback_search_for_diseases_agent` callback before calling the 'search_for_diseases_agent' tool.
+    You MUST call the `after_tool_callback_search_for_diseases_agent` callback after calling the 'search_for_diseases_agent' tool.
 
 **Output**
      The output is a dictionary of the diseases or health issues stemming from consuming the ingredients in the ingredients data provided.
      Format: {"diseases": {...disease_data...}}
 """
 
-def get_disease_analyser_instruction(callback_context: CallbackContext) -> str:
+def get_disease_analyser_agent_instruction(callback_context: CallbackContext) -> str:
     """
     Dynamic instruction function that injects ingredients_list_and_ailment from state.
     """
@@ -43,10 +44,10 @@ def get_disease_analyser_instruction(callback_context: CallbackContext) -> str:
             print(f"[PROMPT] Disease Analyser: Ingredients List and Ailment data from the parent agent is not a dictionary. It is a string:\n{ingredients_data}")
             ingredients_text = f"**Ingredients List and Ailment Data:**\n{ingredients_data}"
     else:
-        ingredients_text = "**WARNING:** No ingredients list found in state. The parent agent may not have provided the data yet."
+        ingredients_text = "⚠️ No ingredients list found in state. The parent agent may not have provided the data yet."
     
     # Inject the ingredients data into the template
-    print(f"[✨PROMPT] Disease Analyser: Ingredients dictionary/list assimilated from the parent agent into the prompt:\n```json\n{json.dumps(ingredients_data, indent=2)}\n```")
+    print(f"[✨PROMPT] Disease Analyser: Ingredients dictionary assimilated from the parent agent into the prompt:\n```json\n{json.dumps(ingredients_data)}\n```")
     instruction = DISEASE_ANALYSER_INSTRUCTIONS_TEMPLATE.replace("{INGREDIENTS_DATA}", ingredients_text)
     
     return instruction
@@ -73,17 +74,17 @@ DISEASE_ANALYSER_SEARCH_AGENT_INSTRUCTIONS_TEMPLATE = """
    The output is a dictionary of the diseases or health issues stemming from consuming the ingredients in the list provided.
 """
 
-def get_disease_analyser_search_agent_instruction(callback_context: CallbackContext) -> str:
+def get_search_for_diseases_agent_instruction(callback_context: CallbackContext) -> str:
     """
     Dynamic instruction function that injects ingredients_list_and_ailment from state for the search agent.
     """
     
     # Get the ingredients list from session state
     ingredients_data = callback_context.session.state.get('ingredients_list_and_ailment')
-    print(f"[✨PROMPT] In state of get_disease_analyser_search_agent_instruction: {ingredients_data}")
-    print(f"[✨PROMPT] [STATE DEBUG] Session state keys check: 'ingredients_list_and_ailment' in state = {'ingredients_list_and_ailment' in callback_context.session.state}")
-    print(f"[✨PROMPT] [STATE DEBUG] Session state object ID: {id(callback_context.session.state)}")
-    print(f"[✨PROMPT] [STATE DEBUG] Session state type: {type(callback_context.session.state)}")
+    # print(f"[✨PROMPT] In state of get_disease_analyser_search_agent_instruction: {ingredients_data}")
+    # print(f"[✨PROMPT] [STATE DEBUG] Session state keys check: 'ingredients_list_and_ailment' in state = {'ingredients_list_and_ailment' in callback_context.session.state}")
+    # print(f"[✨PROMPT] [STATE DEBUG] Session state object ID: {id(callback_context.session.state)}")
+    # print(f"[✨PROMPT] [STATE DEBUG] Session state type: {type(callback_context.session.state)}")
     
     # Try to get from invocation context if available
     if hasattr(callback_context, 'invocation_context'):
@@ -111,7 +112,7 @@ def get_disease_analyser_search_agent_instruction(callback_context: CallbackCont
         ingredients_text = "**WARNING:** No ingredients list found in state. The parent agent may not have provided the data yet."
     
     # Inject the ingredients data into the template
-    print(f"[✨PROMPT] Disease Analyser Search Agent: Ingredients list and ailment data injected into the prompt:\n```json\n{json.dumps(ingredients_data, indent=2)}\n```")
+    print(f"[✨PROMPT] Disease Analyser Search Agent: Ingredients list and ailment data injected into the prompt:\n```json\n{json.dumps(ingredients_data)}\n```")
     instruction = DISEASE_ANALYSER_SEARCH_AGENT_INSTRUCTIONS_TEMPLATE.replace("{INGREDIENTS_DATA}", ingredients_text)
     
     return instruction
