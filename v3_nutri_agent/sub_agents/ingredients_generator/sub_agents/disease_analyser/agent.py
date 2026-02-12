@@ -3,9 +3,9 @@ import os
 from google.adk.agents import Agent
 from google.adk.tools.google_search_tool import GoogleSearchTool
 from google.adk.tools.agent_tool import AgentTool
-from pydantic.types import T
-from .prompts import DISEASE_ANALYSER_INSTRUCTIONS, DISEASE_ANALYSER_DESCRIPTION, get_disease_analyser_instruction
-from .prompts import DISEASE_ANALYSER_SEARCH_AGENT_INSTRUCTIONS, DISEASE_ANALYSER_SEARCH_AGENT_DESCRIPTION, get_disease_analyser_search_agent_instruction
+from .prompts import get_disease_analyser_agent_instruction, get_search_for_diseases_agent_instruction
+from .prompts import DISEASE_ANALYSER_DESCRIPTION, DISEASE_ANALYSER_SEARCH_AGENT_DESCRIPTION
+
 # Add project root to path for config import
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'))
 if project_root not in sys.path:
@@ -20,7 +20,7 @@ from typing import Optional
 
 from google.adk.agents.invocation_context import InvocationContext
 
-def before_disease_analyser_agent_callback(callback_context: CallbackContext) -> Optional[Content]:
+def before_agent_callback_disease_analyser_agent(callback_context: CallbackContext) -> Optional[Content]:
     print(f"[Bf🤖CB] Before_agent_callback triggered for agent: {callback_context.agent_name}")
     # print(f" Invocation ID: {callback_context.invocation_id}")
     # Optional: Log the initial user input if available
@@ -42,26 +42,32 @@ def before_tool_callback_disease_analyser_agent(
     args: Dict[str, Any],
     tool_context: ToolContext,
 ) -> Optional[Dict]:    
-    print(f"[Bf🔧CB] Before_tool_callback triggered for tool: {tool.name}, args: {args} Tool Context - Agent Name: {tool_context.agent_name}")
+
     
     # Check if this is the search_for_diseases_agent AgentTool being invoked
     if tool.name == "search_for_diseases_agent":
         print(f"[Bf🔧CB] ========================================")
         print(f"[Bf🔧CB] search_for_diseases_agent AgentTool is being invoked")
-        print(f"[Bf🔧CB] Arguments passed to the agent: {json.dumps(args, indent=2)}")
+        print(f"[Bf🔧CB] Arguments passed to the agent: ```json\n{json.dumps(args)}\n```")
+        
+        # Get ingredients from session state for logging
+        ingredients_data = None
+        if hasattr(tool_context, 'session') and tool_context.session:
+            ingredients_data = tool_context.session.state.get('ingredients_list_and_ailment')
+        else:
+            ingredients_data = tool_context.state.get('ingredients_list_and_ailment')
+        
+        if ingredients_data and isinstance(ingredients_data, dict):
+            all_ingredient_names = list(ingredients_data.keys())
+            print(f"[Bf🔧CB] Found {len(all_ingredient_names)} total ingredients in session state")
+            print(f"[Bf🔧CB] Note: Ingredients will be injected into the search query by before_tool_callback_search_for_diseases_agent")
+        else:
+            print(f"[Bf🔧CB] ⚠️ No ingredients data found in session state")
+        
         print(f"[Bf🔧CB] ========================================")
         # Note: The actual google_search tool call within search_for_diseases_agent
         # won't trigger this callback - it's internal to that agent
-    
-    # Try to get from session state first (shared state)
-    ingredients_data = None
-    if hasattr(tool_context, 'session') and tool_context.session:
-        ingredients_data = tool_context.session.state.get('ingredients_list_and_ailment')
-        print(f" <<< Ingredients list and ailment from SESSION state: {ingredients_data}")
-    else:
-        # Fallback to tool_context.state (agent-local)
-        ingredients_data = tool_context.state.get('ingredients_list_and_ailment')
-        print(f" <<< Ingredients list and ailment from tool context state: {ingredients_data}")
+        # Ingredients are injected into the search query in before_tool_callback_search_for_diseases_agent
     
     return None
 
@@ -78,7 +84,7 @@ def before_agent_callback_search_for_diseases_agent(callback_context: CallbackCo
     session_state = callback_context.session.state
     ingredients_data = session_state.get('ingredients_list_and_ailment')
 
-    print(f"[Bf🤖CB] Ingredients brought in to the disease analyser agent for analysis:\n```json\n{json.dumps(ingredients_data, indent=2)}\n```")
+    print(f"[Bf🤖CB] Ingredients brought in to the disease analyser agent for analysis:\n```json\n{json.dumps(ingredients_data)}\n```")
     
     if callback_context.user_content:
         print(f"[Bf🤖CB] User content/input to search_for_diseases_agent: {callback_context.user_content.parts[0].text}")
@@ -113,13 +119,23 @@ def before_tool_callback_search_for_diseases_agent(
         print(f"[Bf🔍🔧CB] ORIGINAL SEARCH QUERY:")
         print(f"[Bf🔍🔧CB] {query}")
         
-        # Inject ingredients into the search query
+        # Inject ingredients into the search query (smart injection to prevent query length issues)
         if ingredient_names:
-            # Create a string of ingredient names
-            ingredients_str = ", ".join(ingredient_names)
+            # Limit to first 10 ingredients to prevent query from becoming too long
+            MAX_INGREDIENTS_TO_INCLUDE = 10
+            ingredients_to_include = ingredient_names[:MAX_INGREDIENTS_TO_INCLUDE]
+            
+            # Create a compact string of ingredient names
+            ingredients_str = ", ".join(ingredients_to_include)
+            
+            # If there are more ingredients, add a note
+            if len(ingredient_names) > MAX_INGREDIENTS_TO_INCLUDE:
+                remaining_count = len(ingredient_names) - MAX_INGREDIENTS_TO_INCLUDE
+                ingredients_str += f" and {remaining_count} more"
+            
             # Append to the query
             enhanced_query = f"{query} AND ingredients:{ingredients_str}"
-            print(f"[Bf🔍🔧CB] ENHANCED SEARCH QUERY (with ingredients):")
+            print(f"[Bf🔍🔧CB] ENHANCED SEARCH QUERY (with {len(ingredients_to_include)}/{len(ingredient_names)} ingredients):")
             print(f"[Bf🔍🔧CB] {enhanced_query}")
             args['query'] = enhanced_query
             query = enhanced_query  # Update for validation below
@@ -137,13 +153,14 @@ def before_tool_callback_search_for_diseases_agent(
                 "status": "error"
             }
         
-        # Truncate very long queries to prevent 500 errors
+        # Final truncation check to prevent 500 errors
         MAX_QUERY_LENGTH = 200  # Reasonable limit for search queries
         if len(query) > MAX_QUERY_LENGTH:
             print(f"[Bf🔍🔧CB] ⚠️ WARNING: Query is very long ({len(query)} chars) - truncating to {MAX_QUERY_LENGTH} chars")
             truncated_query = query[:MAX_QUERY_LENGTH].rsplit(' ', 1)[0]  # Truncate at word boundary
             args['query'] = truncated_query
             print(f"[Bf🔍🔧CB] Truncated query: {truncated_query}")
+            query = truncated_query
         
         print(f"[Bf🔍🔧CB] ========================================")
     else:
@@ -205,8 +222,8 @@ search_for_diseases_agent = Agent(
   name="search_for_diseases_agent",
   model=model,    # --> Apply flash model for fast application and minimize token usage
   tools=[google_search],
-  description="To do the actual search and analysis for diseases or health issues stemming from consuming the ingredients in the list provided",
-  instruction=get_disease_analyser_search_agent_instruction,  # Use dynamic instruction function
+  description=DISEASE_ANALYSER_SEARCH_AGENT_DESCRIPTION,
+  instruction=get_search_for_diseases_agent_instruction,  # Use dynamic instruction function
   before_agent_callback=[before_agent_callback_search_for_diseases_agent],  # Add callback to verify session state access
   before_tool_callback=[before_tool_callback_search_for_diseases_agent],  # Print and validate what goes into the search tool
   after_tool_callback=[after_tool_callback_search_for_diseases_agent],  # Handle errors from the search tool
@@ -217,8 +234,8 @@ disease_analyser_agent = Agent(
     name="disease_analyser_agent",
     model=model,
     tools=[AgentTool(agent=search_for_diseases_agent)],
-    before_agent_callback=[before_disease_analyser_agent_callback],
+    before_agent_callback=[before_agent_callback_disease_analyser_agent],
     before_tool_callback=[before_tool_callback_disease_analyser_agent], # Print and validate what goes into the search tool, and inject ingredients
-    instruction=get_disease_analyser_instruction,  # Use dynamic instruction function
+    instruction=get_disease_analyser_agent_instruction,  # Use dynamic instruction function
     description=DISEASE_ANALYSER_DESCRIPTION,
 )
