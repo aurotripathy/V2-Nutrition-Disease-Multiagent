@@ -37,7 +37,7 @@ from google.adk.tools.tool_context import ToolContext
 from google.genai.types import Content
 from typing import Optional, Dict, Any
 
-def before_disease_analyser_tool_callback(
+def before_tool_callback_disease_analyser_agent(
     tool: BaseTool,
     args: Dict[str, Any],
     tool_context: ToolContext,
@@ -118,7 +118,7 @@ def before_tool_callback_search_for_diseases_agent(
             # Create a string of ingredient names
             ingredients_str = ", ".join(ingredient_names)
             # Append to the query
-            enhanced_query = f"{query} {ingredients_str}"
+            enhanced_query = f"{query} AND ingredients:{ingredients_str}"
             print(f"[Bf🔍🔧CB] ENHANCED SEARCH QUERY (with ingredients):")
             print(f"[Bf🔍🔧CB] {enhanced_query}")
             args['query'] = enhanced_query
@@ -218,7 +218,7 @@ disease_analyser_agent = Agent(
     model=model,
     tools=[AgentTool(agent=search_for_diseases_agent)],
     before_agent_callback=[before_disease_analyser_agent_callback],
-    before_tool_callback=[before_disease_analyser_tool_callback], # Print and validate what goes into the search tool, and inject ingredients
+    before_tool_callback=[before_tool_callback_disease_analyser_agent], # Print and validate what goes into the search tool, and inject ingredients
     instruction=get_disease_analyser_instruction,  # Use dynamic instruction function
     description=DISEASE_ANALYSER_DESCRIPTION,
 )
