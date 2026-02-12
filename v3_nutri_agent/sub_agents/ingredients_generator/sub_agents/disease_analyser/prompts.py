@@ -16,7 +16,9 @@ You have been provided with the ingredients list and optional ailment/disease in
 {INGREDIENTS_DATA}
 
 If the disease or ailment field is populated (not empty or None), stick to your research on that disease or ailment.
-You must use the 'google_search_tool' built-in tool to find the diseases or health issues stemming from consuming the ingredients in the list provided.
+You MUST use the agent tool, 'search_for_diseases_agent' to find the diseases or health issues stemming from consuming the ingredients in the list provided.
+You MUST call the `before_tool_callback_search_for_diseases_agent` callback before calling the 'search_for_diseases_agent' tool.
+You MUST call the `after_tool_callback_search_for_diseases_agent` callback after calling the 'search_for_diseases_agent' tool.
 
 **Output**
      The output is a dictionary of the diseases or health issues stemming from consuming the ingredients in the ingredients data provided.
