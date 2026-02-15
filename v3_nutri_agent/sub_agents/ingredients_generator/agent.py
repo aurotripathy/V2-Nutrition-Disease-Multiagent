@@ -1,5 +1,5 @@
 from google.adk.agents import Agent
-from .schema_and_tools import get_grouped_nutriments_from_open_food_facts
+from .open_food_facts_tools import get_grouped_nutriments_from_open_food_facts
 from google.adk.tools.google_search_tool import GoogleSearchTool
 from google.adk.tools.agent_tool import AgentTool
 from .prompts import INGREDIENTS_GENERATOR_INSTRUCTIONS, INGREDIENTS_GENERATOR_DESCRIPTION
@@ -217,7 +217,7 @@ search_ingredients_agent = Agent(
 )
 
 
-from .schema_and_tools import get_grouped_nutriments_from_open_food_facts
+from .open_food_facts_tools import get_grouped_nutriments_from_open_food_facts
 from .sub_agents.disease_analyser.agent import disease_analyser_agent
 
 try:
