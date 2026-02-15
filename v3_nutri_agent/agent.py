@@ -4,7 +4,6 @@ investigate: https://google.github.io/adk-docs/tools-custom/function-tools/#agen
 """
 # @title Import necessary libraries
 import os
-import asyncio
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm  # For multi-model support
 from google.adk.sessions import InMemorySessionService
@@ -36,35 +35,6 @@ SESSION_ID_STATEFUL = "session_state_demo_001"
 USER_ID_STATEFUL = "user_state_demo"
 APP_NAME = "v3_nutri_agent_team" 
 
-# Define initial state data - user prefers Celsius initially
-initial_state = {
-    # TODO: Add initial state data
-}
-
-# Async function to initialize session with state
-# deviates a bit since await cannot be called a module level code.
-async def init_session_with_state():
-    """Initialize session with initial state."""
-    # Create the session, providing the initial state
-    session_stateful = await session_service_stateful.create_session(
-        app_name=APP_NAME,  # Use the consistent app name
-        user_id=USER_ID_STATEFUL,
-        session_id=SESSION_ID_STATEFUL,
-        state=initial_state  # <<< Initialize state during creation
-    )
-
-    # Verify the initial state was set correctly
-    from utils.session import verify_initial_state
-    await verify_initial_state(
-        session_service_stateful,
-        APP_NAME,
-        USER_ID_STATEFUL,
-        SESSION_ID_STATEFUL
-    )
-    return session_stateful
-
-# Initialize session with state (run async code)
-session_stateful = asyncio.run(init_session_with_state())
 
 
 # @title Import tools and prompts

@@ -3,14 +3,49 @@ from google.adk.runners import Runner
 from google.genai.types import Content
 from google.genai import types  # For creating message Content/Parts
 import os
+import asyncio
 
-# --- Create Runner for this Root Agent & NEW Session Service ---
-runner_root = Runner(
-    agent=root_agent,
-    app_name=APP_NAME,
-    session_service=session_service_stateful # Use the NEW stateful session service
-)
-print(f"✅ Runner created for stateful root agent '{runner_root.agent.name}' using stateful session service.")
+# Define initial state data
+initial_state = {
+    # TODO: Add initial state data
+}
+
+# Async function to initialize session with state
+async def init_session_with_state():
+    """Initialize session with initial state."""
+    # Create the session, providing the initial state
+    session_stateful = await session_service_stateful.create_session(
+        app_name=APP_NAME,  # Use the consistent app name
+        user_id=USER_ID_STATEFUL,
+        session_id=SESSION_ID_STATEFUL,
+        state=initial_state  # <<< Initialize state during creation
+    )
+
+    # Verify the initial state was set correctly
+    from utils.session import verify_initial_state
+    await verify_initial_state(
+        session_service_stateful,
+        APP_NAME,
+        USER_ID_STATEFUL,
+        SESSION_ID_STATEFUL
+    )
+    return session_stateful
+
+# --- Initialize session and create Runner for this Root Agent ---
+async def setup_runner():
+    """Initialize session and create runner."""
+    # Initialize session with state
+    session_stateful = await init_session_with_state()
+    print(f"✅ Session initialized with state.")
+    
+    # Create Runner for this Root Agent & NEW Session Service
+    runner_root = Runner(
+        agent=root_agent,
+        app_name=APP_NAME,
+        session_service=session_service_stateful # Use the NEW stateful session service
+    )
+    print(f"✅ Runner created for stateful root agent '{runner_root.agent.name}' using stateful session service.")
+    return runner_root
 
 
 # # @title 4. Interact to Test State Flow and output_key
@@ -46,56 +81,48 @@ async def query_agent_async(query: str, runner, user_id, session_id):
     print(f"<<< Final Agent Response: {final_response_text}")
 
 
-# Ok, here's where we send a series of queries to the agent and see how it responds.
-# Only define and run if the root agent exists
-if 'runner_root' in globals() and runner_root:
-    # Define the main async function for the conversation logic.
-    # The 'await' keywords INSIDE this function are necessary for async operations.
-    async def run_stateful_conversation():
-        print("\n--- Querying State: ---")
-        
-        # Read queries from queries.txt file
-        queries_file = os.path.join(os.path.dirname(__file__), 'queries.txt')
-        queries = []
-        try:
-            with open(queries_file, 'r') as f:
-                for line in f:
-                    query = line.strip()
-                    if query:  # Skip empty lines
-                        queries.append(query)
-            print(f"✅ Loaded {len(queries)} queries from queries.txt")
-        except FileNotFoundError:
-            print(f"⚠️ Warning: queries.txt not found. Using empty query list.")
-        except Exception as e:
-            print(f"⚠️ Error reading queries.txt: {e}")
-        
-        # Loop through queries and execute them
-        for i, query in enumerate(queries, 1):
-            print(f"\n--- Query {i}/{len(queries)}: {query[:50]}... ---" if len(query) > 50 else f"\n--- Query {i}/{len(queries)}: {query} ---")
-            await query_agent_async(
-                query=query,
-                runner=runner_root,
-                user_id=USER_ID_STATEFUL,
-                session_id=SESSION_ID_STATEFUL
-            )
+# Define the main async function for the conversation logic.
+async def run_stateful_conversation():
+    """Main async function that sets up runner and runs queries."""
+    # Setup runner (initializes session and creates runner)
+    runner_root = await setup_runner()
+    
+    print("\n--- Querying State: ---")
+    
+    # Read queries from queries.txt file
+    queries_file = os.path.join(os.path.dirname(__file__), 'queries.txt')
+    queries = []
+    try:
+        with open(queries_file, 'r') as f:
+            for line in f:
+                query = line.strip()
+                if query:  # Skip empty lines
+                    queries.append(query)
+        print(f"✅ Loaded {len(queries)} queries from queries.txt")
+    except FileNotFoundError:
+        print(f"⚠️ Warning: queries.txt not found. Using empty query list.")
+    except Exception as e:
+        print(f"⚠️ Error reading queries.txt: {e}")
+    
+    # Loop through queries and execute them
+    for i, query in enumerate(queries, 1):
+        print(f"\n--- Query {i}/{len(queries)}: {query[:50]}... ---" if len(query) > 50 else f"\n--- Query {i}/{len(queries)}: {query} ---")
+        await query_agent_async(
+            query=query,
+            runner=runner_root,
+            user_id=USER_ID_STATEFUL,
+            session_id=SESSION_ID_STATEFUL
+        )
 
-    # --- Execute the `run_stateful_conversation` async function ---
+# --- Execute the `run_stateful_conversation` async function ---
+# If running this code as a standard Python script from your terminal,
+# the script context is synchronous. `asyncio.run()` is needed to
+# create and manage an event loop to execute your async function.
 
-    # METHOD 2: asyncio.run (For Standard Python Scripts [.py])
-    # If running this code as a standard Python script from your terminal,
-    # the script context is synchronous. `asyncio.run()` is needed to
-    # create and manage an event loop to execute your async function.
-
-    import asyncio
-    if __name__ == "__main__":  # Ensures this runs only when script is executed directly
-        print("Executing using 'asyncio.run()' (for standard Python scripts)...")
-        try:
-            # This creates an event loop, runs your async function, and closes the loop.
-            asyncio.run(run_stateful_conversation())
-        except Exception as e:
-            print(f"An error occurred: {e}")
-
-
-else:
-    # This message prints if the root agent variable wasn't found earlier
-    print("\n⚠️ Skipping agent team conversation execution as the root agent was not successfully defined in a previous step.")
+if __name__ == "__main__":  # Ensures this runs only when script is executed directly
+    print("Executing using 'asyncio.run()' (for standard Python scripts)...")
+    try:
+        # This creates an event loop, runs your async function, and closes the loop.
+        asyncio.run(run_stateful_conversation())
+    except Exception as e:
+        print(f"An error occurred: {e}")
