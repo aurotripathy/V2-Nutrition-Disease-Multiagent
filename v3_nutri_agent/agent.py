@@ -10,17 +10,6 @@ from google.adk.sessions import InMemorySessionService
 from google.adk.runners import Runner
 from google.genai import types  # For creating message Content/Parts
 
-import warnings
-warnings.filterwarnings("ignore")
-
-import logging
-logging.basicConfig(level=logging.ERROR)
-
-print("Libraries imported.")
-
-# Load environment variables
-from utils.environment import load_environment
-load_environment()
 
 # Import model constants
 from config import GEMINI_MODEL

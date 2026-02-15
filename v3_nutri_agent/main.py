@@ -1,9 +1,23 @@
+import os
+import asyncio
+import warnings
+import logging
+
+# Global configuration
+warnings.filterwarnings("ignore")
+logging.basicConfig(level=logging.ERROR)
+
+# Load environment variables
+from utils.environment import load_environment
+load_environment()
+
+print("Libraries imported and environment loaded.")
+
+# Import agent and related constants
 from agent import root_agent, USER_ID_STATEFUL, SESSION_ID_STATEFUL, APP_NAME, session_service_stateful
 from google.adk.runners import Runner
 from google.genai.types import Content
 from google.genai import types  # For creating message Content/Parts
-import os
-import asyncio
 
 # Define initial state data
 initial_state = {
