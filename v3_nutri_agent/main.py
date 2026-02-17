@@ -56,7 +56,7 @@ async def setup_runner():
     runner_root = Runner(
         agent=root_agent,
         app_name=APP_NAME,
-        session_service=session_service_stateful # Use the NEW stateful session service
+        session_service=session_service_stateful
     )
     print(f"✅ Runner created for stateful root agent '{runner_root.agent.name}' using stateful session service.")
     return runner_root
@@ -101,32 +101,18 @@ async def run_stateful_conversation():
     # Setup runner (initializes session and creates runner)
     runner_root = await setup_runner()
     
-    print("\n--- Querying State: ---")
-    
-    # Read queries from queries.txt file
-    queries_file = os.path.join(os.path.dirname(__file__), 'queries.txt')
-    queries = []
-    try:
-        with open(queries_file, 'r') as f:
-            for line in f:
-                query = line.strip()
-                if query:  # Skip empty lines
-                    queries.append(query)
-        print(f"✅ Loaded {len(queries)} queries from queries.txt")
-    except FileNotFoundError:
-        print(f"⚠️ Warning: queries.txt not found. Using empty query list.")
-    except Exception as e:
-        print(f"⚠️ Error reading queries.txt: {e}")
+    print("\n--- Reading the query from the file 'queries.txt' ---")
+    with open('query.txt', 'r') as file:
+        query = file.readlines()[0]
+    print(f"--- Query: {query} ---")
     
     # Loop through queries and execute them
-    for i, query in enumerate(queries, 1):
-        print(f"\n--- Query {i}/{len(queries)}: {query[:50]}... ---" if len(query) > 50 else f"\n--- Query {i}/{len(queries)}: {query} ---")
-        await query_agent_async(
-            query=query,
-            runner=runner_root,
-            user_id=USER_ID_STATEFUL,
-            session_id=SESSION_ID_STATEFUL
-        )
+    await query_agent_async(
+        query=query,
+        runner=runner_root,
+        user_id=USER_ID_STATEFUL,
+        session_id=SESSION_ID_STATEFUL
+    )
 
 # --- Execute the `run_stateful_conversation` async function ---
 # If running this code as a standard Python script from your terminal,
