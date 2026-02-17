@@ -114,7 +114,7 @@ def after_tool_callback_ingredients_generator_agent(
     print(f"[Af🔧CB] Tool response: {tool_response}")
     
     # Check if this is the OFF API tool call. there are two tools that can be called: get_nutriments_from_open_food_facts and get_nutriments_from_OCRd_image_file
-    if tool.name == "get_nutriments_from_open_food_facts":
+    if tool.name == "get_grouped_nutriments_from_open_food_facts":
         print(f"[T] [OFF API OUTPUT] Food item searched: {args.get('food_item', 'N/A')}")
         print(f"[T] [OFF API OUTPUT] Result type: {type(tool_response)}")
         
@@ -285,7 +285,7 @@ try:
         instruction=INGREDIENTS_GENERATOR_INSTRUCTIONS,
         description=INGREDIENTS_GENERATOR_DESCRIPTION,
         tools=[get_nutriments_from_OCRd_image_file,  
-            get_nutriments_from_open_food_facts,
+            get_grouped_nutriments_from_open_food_facts,
             AgentTool(agent=search_ingredients_agent)
         ],
         before_tool_callback=before_tool_callback_ingredients_generator_agent,
