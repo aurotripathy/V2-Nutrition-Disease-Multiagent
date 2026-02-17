@@ -37,7 +37,7 @@ def get_nutriments_from_open_food_facts(food_item: str) -> dict:
     logging.basicConfig(level=logging.DEBUG)
 
     logging.debug(f"Searching Open Food Facts for {food_item}")
-    print(f"▶ Tool call: Searching Open Food Facts for {food_item}") # cant see this in the logs
+    print(f"[🔧C] Toolcall: Searching Open Food Facts for {food_item}") # cant see this in the logs
     start_time = time.time()
     nutriments = {}
     try:
