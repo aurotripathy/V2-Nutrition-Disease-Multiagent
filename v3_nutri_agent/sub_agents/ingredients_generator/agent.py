@@ -1,5 +1,7 @@
 from google.adk.agents import Agent
-from .open_food_facts_tools import get_grouped_nutriments_from_open_food_facts
+# from .open_food_facts_tools import get_grouped_nutriments_from_open_food_facts
+from .ocr_processing_tools import get_nutriments_from_OCRd_image_file
+from .open_food_facts_tools import get_nutriments_from_open_food_facts
 from google.adk.tools.google_search_tool import GoogleSearchTool
 from google.adk.tools.agent_tool import AgentTool
 from .prompts import INGREDIENTS_GENERATOR_INSTRUCTIONS, INGREDIENTS_GENERATOR_DESCRIPTION
@@ -52,8 +54,24 @@ def after_agent_callback_ingredients_generator_agent(callback_context: CallbackC
             print(f"[Af🤖CB] Data preview: {str(data)[:100]}...")
     else:
         print(f"[Af🤖CB] ⚠️ ingredients_list_and_ailment NOT found in session state")
+        # Try to get from agent response if available
+        if hasattr(callback_context, 'agent_response') and callback_context.agent_response:
+            response_data = callback_context.agent_response
+            if isinstance(response_data, dict):
+                session_state['ingredients_list_and_ailment'] = response_data
+                print(f"[Af🤖CB] ✅ Saved agent response to session state as fallback")
         # The output_key should have saved the agent's final response
         # If it's not there, the agent might not have returned the ingredients data
+    
+    # CRITICAL: Ensure data is in state before any transfer happens
+    # Re-verify and re-save to ensure it's accessible to sub-agents
+    if 'ingredients_list_and_ailment' in session_state:
+        data = session_state.get('ingredients_list_and_ailment')
+        # Force save again to ensure it's persisted
+        session_state['ingredients_list_and_ailment'] = data
+        print(f"[Af🤖CB] 🔒 Re-verified and re-saved ingredients_list_and_ailment to ensure sub-agent access")
+        print(f"[Af🤖CB] 🔒 State object ID: {id(session_state)}")
+        print(f"[Af🤖CB] 🔒 Session object ID: {id(callback_context.session)}")
     
     # Returning None allows the agent execution to proceed normally
     return None
@@ -95,8 +113,8 @@ def after_tool_callback_ingredients_generator_agent(
 
     print(f"[Af🔧CB] Tool response: {tool_response}")
     
-    # Check if this is the OFF API tool call
-    if tool.name == "get_grouped_nutriments_from_open_food_facts":
+    # Check if this is the OFF API tool call. there are two tools that can be called: get_nutriments_from_open_food_facts and get_nutriments_from_OCRd_image_file
+    if tool.name == "get_nutriments_from_open_food_facts":
         print(f"[T] [OFF API OUTPUT] Food item searched: {args.get('food_item', 'N/A')}")
         print(f"[T] [OFF API OUTPUT] Result type: {type(tool_response)}")
         
@@ -105,31 +123,70 @@ def after_tool_callback_ingredients_generator_agent(
             if not tool_response:
                 print("[T] ⚠️ [OFF API OUTPUT] Result: Empty dictionary (no nutriments found)")
             else:
-                # Save directly to session state (no need for global variable)
-                # In Google ADK, tool_context.state IS the session state
-                tool_context.state['ingredients_list_and_ailment'] = tool_response
-                print(f"[T] [OFF API OUTPUT] Result: Found {len(tool_response)} nutrient groups")
-                print(f">>> ✅ Saved ingredients_list_and_ailment to tool_context.state: {bool(tool_response)}")
-                print(f">>> [STATE] Verification: {tool_context.state.get('ingredients_list_and_ailment') is not None}")
-                # Try to access session directly if available
+                # Format the data according to the expected structure: {"ingredients": {...}, "ailment": "..."}
+                # For now, use the tool_response as ingredients (it's already a dict of ingredients)
+                # The ailment will be extracted by the agent from user input
+                formatted_data = tool_response  # The tool_response IS the ingredients dict
+                
+                # CRITICAL: Save to session state - use the session from tool_context
+                # The tool_context should have access to the session
+                session = None
                 if hasattr(tool_context, 'session') and tool_context.session:
-                    tool_context.session.state['ingredients_list_and_ailment'] = tool_response
-                    print(f">>> [STATE] Also saved to tool_context.session.state: {tool_context.session.state.get('ingredients_list_and_ailment') is not None}")
-                # Also try to get session from invocation context if available
-                try:
-                    # Check if tool_context has an invocation_context or similar
-                    if hasattr(tool_context, 'invocation_context'):
-                        inv_context = tool_context.invocation_context
-                        if hasattr(inv_context, 'session'):
-                            inv_context.session.state['ingredients_list_and_ailment'] = tool_response
-                            print(f">>> [STATE] Also saved via invocation_context.session.state")
-                except Exception as e:
-                    print(f">>> [STATE] Could not access via invocation_context: {e}")
+                    session = tool_context.session
+                elif hasattr(tool_context, 'invocation_context'):
+                    inv_context = tool_context.invocation_context
+                    if hasattr(inv_context, 'session'):
+                        session = inv_context.session
+                
+                if session:
+                    session.state['ingredients_list_and_ailment'] = formatted_data
+                    print(f">>> ✅ Saved ingredients_list_and_ailment to session.state")
+                    print(f">>> [STATE] Session ID: {id(session)}")
+                    print(f">>> [STATE] State object ID: {id(session.state)}")
+                    print(f">>> [STATE] Verification: {session.state.get('ingredients_list_and_ailment') is not None}")
+                    print(f">>> [STATE] Data keys: {list(formatted_data.keys())[:5]}..." if isinstance(formatted_data, dict) else "Not a dict")
+                else:
+                    print(f">>> ⚠️ Could not find session object in tool_context")
+                
+                # Also save to tool_context.state as fallback
+                tool_context.state['ingredients_list_and_ailment'] = formatted_data
+                print(f">>> ✅ Also saved to tool_context.state as fallback")
+                
+                print(f"[T] [OFF API OUTPUT] Result: Found {len(tool_response)} nutrient groups")
                 print("[T] [OFF API OUTPUT] Nutrient groups:")
                 for nutrient_name, nutrient_data in tool_response.items():
                     print(f"   - {nutrient_name}: {nutrient_data}")
         else:
             print(f"[T] [OFF API OUTPUT] Result: {tool_response}")
+    elif tool.name == "search_ingredients_agent":
+        # Handle search_ingredients_agent (AgentTool) response
+        print(f"[T] [SEARCH_AGENT OUTPUT] Tool: {tool.name}")
+        print(f"[T] [SEARCH_AGENT OUTPUT] Result type: {type(tool_response)}")
+        
+        if isinstance(tool_response, dict) and tool_response:
+            # Save to session state - ensure we save to the actual session
+            if hasattr(tool_context, 'session') and tool_context.session:
+                tool_context.session.state['ingredients_list_and_ailment'] = tool_response
+                print(f">>> ✅ Saved ingredients_list_and_ailment to tool_context.session.state from search_ingredients_agent")
+                print(f">>> [STATE] Verification: {tool_context.session.state.get('ingredients_list_and_ailment') is not None}")
+            
+            # Also save to tool_context.state
+            tool_context.state['ingredients_list_and_ailment'] = tool_response
+            print(f">>> ✅ Also saved to tool_context.state from search_ingredients_agent")
+            
+            # Also try invocation context
+            try:
+                if hasattr(tool_context, 'invocation_context'):
+                    inv_context = tool_context.invocation_context
+                    if hasattr(inv_context, 'session'):
+                        inv_context.session.state['ingredients_list_and_ailment'] = tool_response
+                        print(f">>> ✅ Also saved via invocation_context.session.state from search_ingredients_agent")
+            except Exception as e:
+                print(f">>> [STATE] Could not access via invocation_context: {e}")
+            
+            print(f"[T] [SEARCH_AGENT OUTPUT] Result keys: {list(tool_response.keys())}")
+        else:
+            print(f"[T] [SEARCH_AGENT OUTPUT] Result: {tool_response}")
     else:
         # For other tools, just print a summary
         print(f"[T] [TOOL OUTPUT] Tool '{tool.name}' returned: {type(tool_response)}")
@@ -223,11 +280,12 @@ from .sub_agents.disease_analyser.agent import disease_analyser_agent
 try:
     # 🤖 The Ingredients Generator Agent
     ingredients_generator_agent = Agent(
-        name="ingredients_generator",
+        name="ingredients_generator_agent",
         model=model,
         instruction=INGREDIENTS_GENERATOR_INSTRUCTIONS,
         description=INGREDIENTS_GENERATOR_DESCRIPTION,
-        tools=[get_grouped_nutriments_from_open_food_facts,  
+        tools=[get_nutriments_from_OCRd_image_file,  
+            get_nutriments_from_open_food_facts,
             AgentTool(agent=search_ingredients_agent)
         ],
         before_tool_callback=before_tool_callback_ingredients_generator_agent,
