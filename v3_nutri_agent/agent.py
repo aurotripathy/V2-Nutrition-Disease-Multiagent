@@ -28,33 +28,54 @@ APP_NAME = "v3_nutri_agent_team"
 
 # @title Import tools and prompts
 from prompts import ORCHESTRATOR_AGENT_FOR_TEAM_INSTRUCTION
-
+from prompts import ORCHESTRATOR_AGENT_FOR_TEAM_DESCRIPTION
 # @title Define Greeting and Farewell Sub-Agents
 # Import the agents from their modules
 from sub_agents.greeting_handler.agent import greeting_handler_agent 
 from sub_agents.farewell_handler.agent import farewell_handler_agent 
 from sub_agents.ingredients_generator.agent import ingredients_generator_agent
 
-# @title Define the Root Agent with Sub-Agents
+# Import callback types
+from google.adk.agents.callback_context import CallbackContext
+from google.genai.types import Content
+from typing import Optional
 
-# Ensure sub-agents were created successfully before defining the root agent.
-# Also ensure the  'get_weather_stateful' tool is defined.
-root_agent = None
 
-# Check if function is defined (proper way for imported functions)
-# Method 1: Use callable() - checks if it's a callable object
-
+def before_agent_callback_root_agent(callback_context: CallbackContext) -> Optional[Content]:
+    """Callback to log which sub-agent is being invoked."""
+    print(f"[Bf🤖CB] [ROOT] Before_agent_callback triggered for agent: {callback_context.agent_name}")
+    
+    # Check if this is a sub-agent invocation
+    # The agent_name will show which agent is being invoked
+    sub_agent_names = [
+        greeting_handler_agent.name,
+        farewell_handler_agent.name,
+        ingredients_generator_agent.name
+    ]
+    
+    if callback_context.agent_name in sub_agent_names:
+        print(f"[Bf🤖CB] [ROOT] ➡️ Sub-agent invoked: {callback_context.agent_name}")
+    elif callback_context.agent_name == "orchestrator_agent":
+        print(f"[Bf🤖CB] [ROOT] ➡️ Root orchestrator agent invoked")
+    else:
+        print(f"[Bf🤖CB] [ROOT] ➡️ Agent invoked: {callback_context.agent_name}")
+    
+    # Optional: Log the initial user input if available
+    if callback_context.user_content:
+        print(f"[Bf🤖CB] [ROOT] Initial User Input: {callback_context.user_content.parts[0].text}")
+    
+    # Returning None allows the agent execution to proceed normally
+    return None
 
 root_agent_model = GEMINI_MODEL
 
 root_agent = Agent(
     name="orchestrator_agent",
     model=root_agent_model,
-    description="Root orchestrator agent coordinating the sub-agents.",
-    instruction=ORCHESTRATOR_AGENT_FOR_TEAM_INSTRUCTION, # Root agent still needs the weather tool for its core task
-    # Key change: Link the sub-agents here!
-    # insert before callback to check for quit
+    description=ORCHESTRATOR_AGENT_FOR_TEAM_DESCRIPTION,
+    instruction=ORCHESTRATOR_AGENT_FOR_TEAM_INSTRUCTION,
     sub_agents=[greeting_handler_agent, farewell_handler_agent, ingredients_generator_agent],
+    before_agent_callback=[before_agent_callback_root_agent],
     output_key="TBD", # <<< Auto-save agent's final response
 )
 print(f"✅ Root Agent '{root_agent.name}' created using TBD.")
