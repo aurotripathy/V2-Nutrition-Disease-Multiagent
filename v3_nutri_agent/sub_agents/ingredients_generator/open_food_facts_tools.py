@@ -158,12 +158,18 @@ if __name__ == "__main__":
     
     search_term = args.search_term
     
+    print(f"{30*'-'} Search term: {search_term} {30*'-'}")
     print(f"Getting nutriments for {search_term} from Open Food Facts and grouping them:")   
+    print(f"{60*'-'}")
+
     grouped_nutriments = get_grouped_nutriments_from_open_food_facts(search_term)
     for nutrient_name, nutrient_data in grouped_nutriments.items():
         print(f"{nutrient_name}: {nutrient_data}\n")
 
-    print("Getting nutriments from Open Food Facts flat (un-grouped), one line per nutrient:")
-    nutriments = get_nutriments_from_open_food_facts(search_term)
-    for nutrient_name, nutrient_data in nutriments.items():
-        print(f"{nutrient_name}: {nutrient_data}")
+    # Legacy code: getting nutriments from Open Food Facts flat (un-grouped), one line per nutrient
+    # print(f"{30*'-'} Search term: {search_term} {30*'-'}")
+    # print(f"Getting nutriments for {search_term} from Open Food Facts flat (un-grouped), one line per nutrient:")   
+    # print(f"{60*'-'}")
+    # nutriments = get_nutriments_from_open_food_facts(search_term)
+    # for nutrient_name, nutrient_data in nutriments.items():
+    #     print(f"{nutrient_name}: {nutrient_data}")
