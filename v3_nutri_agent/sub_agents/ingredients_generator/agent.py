@@ -158,6 +158,7 @@ def after_tool_callback_ingredients_generator_agent(
                     print(f"   - {nutrient_name}: {nutrient_data}")
         else:
             print(f"[T] [OFF API OUTPUT] Result: {tool_response}")
+    
     elif tool.name == "search_ingredients_agent":
         # Handle search_ingredients_agent (AgentTool) response
         print(f"[T] [SEARCH_AGENT OUTPUT] Tool: {tool.name}")
@@ -187,6 +188,16 @@ def after_tool_callback_ingredients_generator_agent(
             print(f"[T] [SEARCH_AGENT OUTPUT] Result keys: {list(tool_response.keys())}")
         else:
             print(f"[T] [SEARCH_AGENT OUTPUT] Result: {tool_response}")
+    
+    elif tool.name == "get_nutriments_from_OCRd_image_file":
+        print(f"[T] [OCRD IMAGE OUTPUT] Tool: {tool.name}")
+        print(f"[T] [OCRD IMAGE OUTPUT] Result type: {type(tool_response)}")
+        if isinstance(tool_response, dict) and tool_response:
+            print(f"[T] [OCRD IMAGE OUTPUT] Result keys: {list(tool_response.keys())}")
+        else:
+            print(f"[T] [OCRD IMAGE OUTPUT] Result: {tool_response}")
+        tool_context.state['ingredients_list_and_ailment'] = tool_response
+    
     else:
         # For other tools, just print a summary
         print(f"[T] [TOOL OUTPUT] Tool '{tool.name}' returned: {type(tool_response)}")
