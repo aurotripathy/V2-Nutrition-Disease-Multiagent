@@ -90,8 +90,8 @@ def get_nutriments_from_OCRd_image_file(file_path: str) -> dict:
                         try:
                             parsed_json = json.loads(ocr_text)
                             print(f"Valid JSON received on attempt {retry_count + 1}")
-                            # Re-encode to ensure clean JSON string
-                            ocr_text = json.dumps(parsed_json, ensure_ascii=False)
+                            # Store as parsed JSON object instead of string for better readability
+                            ocr_text = parsed_json
                             break
                         except json.JSONDecodeError as e:
                             # Not valid JSON, print debug info and retry
@@ -113,15 +113,16 @@ def get_nutriments_from_OCRd_image_file(file_path: str) -> dict:
             image_base64 = base64.b64encode(image_data).decode('utf-8')
             
             # Create structured response
+            # If ocr_text is already a parsed JSON object, use it directly; otherwise keep as string
             result = {
-                "file_path": file_path,
-                "file_type": "image",
-                "file_size_bytes": file_size,
-                "base64_data": image_base64,
-                "ocr_text": ocr_text
+                # "file_path": file_path,
+                # "file_type": "image",
+                # "file_size_bytes": file_size,
+                # "base64_data": image_base64,
+                "ocr_text": ocr_text if isinstance(ocr_text, dict) else ocr_text
             }
             
-            return json.dumps(result, indent=2)
+            return json.dumps(result, indent=None, ensure_ascii=False)
         
         # Handle invalid image files, error out for now
         else:
