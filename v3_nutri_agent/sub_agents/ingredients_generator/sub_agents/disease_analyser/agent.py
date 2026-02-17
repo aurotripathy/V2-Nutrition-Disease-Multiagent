@@ -23,10 +23,33 @@ from google.adk.agents.invocation_context import InvocationContext
 def before_agent_callback_disease_analyser_agent(callback_context: CallbackContext) -> Optional[Content]:
     print(f"[Bf🤖CB] Before_agent_callback triggered for agent: {callback_context.agent_name}")
     # print(f" Invocation ID: {callback_context.invocation_id}")
-    # Optional: Log the initial user input if available
-    print(f" <<< Ingredients list and ailment: {callback_context.session.state.get('ingredients_list_and_ailment')}")
+    
+    # Debug: Check state access
+    session_state = callback_context.session.state
+    print(f"[Bf🤖CB] 🔍 Session state object ID: {id(session_state)}")
+    print(f"[Bf🤖CB] 🔍 Session object ID: {id(callback_context.session)}")
+    print(f"[Bf🤖CB] 🔍 State keys: {list(session_state.keys()) if hasattr(session_state, 'keys') else 'N/A'}")
+    
+    # Try multiple ways to access the data
+    ingredients_data = None
+    if 'ingredients_list_and_ailment' in session_state:
+        ingredients_data = session_state.get('ingredients_list_and_ailment')
+        print(f"[Bf🤖CB] ✅ Found ingredients_list_and_ailment in session_state")
+    else:
+        # Try accessing via get with default
+        ingredients_data = session_state.get('ingredients_list_and_ailment')
+        print(f"[Bf🤖CB] ⚠️ ingredients_list_and_ailment not in session_state (using .get() returned: {ingredients_data})")
+    
+    # Also try direct attribute access if available
+    if hasattr(session_state, 'ingredients_list_and_ailment'):
+        ingredients_data = getattr(session_state, 'ingredients_list_and_ailment')
+        print(f"[Bf🤖CB] ✅ Found via direct attribute access")
+    
+    print(f"[Bf🤖CB] <<< Ingredients list and ailment: {ingredients_data}")
+    print(f"[Bf🤖CB] <<< Type: {type(ingredients_data)}")
+    
     if callback_context.user_content:
-        print(f" Initial User Input: {callback_context.user_content.parts[0].text}")
+        print(f"[Bf🤖CB] Initial User Input: {callback_context.user_content.parts[0].text}")
         
     # Returning None allows the agent execution to proceed normally
     return None
