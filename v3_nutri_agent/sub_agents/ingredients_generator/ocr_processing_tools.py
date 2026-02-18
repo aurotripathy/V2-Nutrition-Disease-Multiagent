@@ -3,6 +3,7 @@ import google.genai as genai  # Official Google Generative AI SDK
 from google.genai import types  # For creating message Content/Parts                                                                                                                                 
 import json
 import base64
+from config import GEMINI_OCR_MODEL
            
 
 def get_nutriments_from_OCRd_image_file(file_path: str) -> dict:
@@ -54,7 +55,7 @@ def get_nutriments_from_OCRd_image_file(file_path: str) -> dict:
                     # Use responseMimeType to force JSON output
                     # Note: Even with responseMimeType, sometimes markdown wrapping occurs
                     response = client.models.generate_content(
-                        model="models/gemini-2.5-flash",
+                        model=f"models/{GEMINI_OCR_MODEL}",
                         contents=[types.Content(
                             parts=[
                                 types.Part(text=prompt_text),
