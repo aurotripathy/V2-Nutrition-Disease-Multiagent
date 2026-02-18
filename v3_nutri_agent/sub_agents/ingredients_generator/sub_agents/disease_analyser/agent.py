@@ -22,7 +22,6 @@ from google.adk.agents.invocation_context import InvocationContext
 
 def before_agent_callback_disease_analyser_agent(callback_context: CallbackContext) -> Optional[Content]:
     print(f"[Bf🤖CB] Before_agent_callback triggered for agent: {callback_context.agent_name}")
-    # print(f" Invocation ID: {callback_context.invocation_id}")
     
     # Debug: Check state access
     session_state = callback_context.session.state
@@ -134,6 +133,7 @@ def before_tool_callback_search_for_diseases_agent(
     if ingredients_data and isinstance(ingredients_data, dict):
         ingredient_names = list(ingredients_data.keys())
         print(f"[Bf🔍🔧CB] Found {len(ingredient_names)} ingredients in session state")
+    
     
     # Print the actual search query with validation
     if 'query' in args:
