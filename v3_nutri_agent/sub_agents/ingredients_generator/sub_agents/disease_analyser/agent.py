@@ -3,7 +3,7 @@ import os
 from google.adk.agents import Agent
 from google.adk.tools.google_search_tool import GoogleSearchTool
 from google.adk.tools.agent_tool import AgentTool
-from .prompts import get_disease_analyser_agent_instruction, get_search_for_diseases_agent_instruction
+from .prompts import setup_disease_analyser_agent_instruction, setup_search_for_diseases_agent_instruction
 from .prompts import DISEASE_ANALYSER_DESCRIPTION, DISEASE_ANALYSER_SEARCH_AGENT_DESCRIPTION
 
 # Add project root to path for config import
@@ -246,7 +246,7 @@ search_for_diseases_agent = Agent(
   model=model,    # --> Apply flash model for fast application and minimize token usage
   tools=[google_search],
   description=DISEASE_ANALYSER_SEARCH_AGENT_DESCRIPTION,
-  instruction=get_search_for_diseases_agent_instruction,  # Use dynamic instruction function
+  instruction=setup_search_for_diseases_agent_instruction,  # Use dynamic instruction function
   before_agent_callback=[before_agent_callback_search_for_diseases_agent],  # Add callback to verify session state access
   before_tool_callback=[before_tool_callback_search_for_diseases_agent],  # Print and validate what goes into the search tool
   after_tool_callback=[after_tool_callback_search_for_diseases_agent],  # Handle errors from the search tool
@@ -259,6 +259,6 @@ disease_analyser_agent = Agent(
     tools=[AgentTool(agent=search_for_diseases_agent)],
     before_agent_callback=[before_agent_callback_disease_analyser_agent],
     before_tool_callback=[before_tool_callback_disease_analyser_agent], # Print and validate what goes into the search tool, and inject ingredients
-    instruction=get_disease_analyser_agent_instruction,  # Use dynamic instruction function
+    instruction=setup_disease_analyser_agent_instruction,  # Use dynamic instruction function
     description=DISEASE_ANALYSER_DESCRIPTION,
 )
