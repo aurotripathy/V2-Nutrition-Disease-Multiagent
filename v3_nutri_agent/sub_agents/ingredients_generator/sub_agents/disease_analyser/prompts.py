@@ -24,7 +24,7 @@ DISEASE_ANALYSER_INSTRUCTIONS_TEMPLATE = """
      Format: {"diseases": {...disease_data...}}
 """
 
-def get_disease_analyser_agent_instruction(callback_context: CallbackContext) -> str:
+def setup_disease_analyser_agent_instruction(callback_context: CallbackContext) -> str:
     """
     Dynamic instruction function that injects ingredients_list_and_ailment from state.
     """
@@ -72,7 +72,7 @@ DISEASE_ANALYSER_SEARCH_AGENT_INSTRUCTIONS_TEMPLATE = """
    The output is a dictionary of the diseases or health issues stemming from consuming the ingredients in the list provided.
 """
 
-def get_search_for_diseases_agent_instruction(callback_context: CallbackContext) -> str:
+def setup_search_for_diseases_agent_instruction(callback_context: CallbackContext) -> str:
     """
     Dynamic instruction function that injects ingredients_list_and_ailment from state for the search agent.
     """
