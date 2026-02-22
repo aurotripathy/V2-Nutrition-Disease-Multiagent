@@ -11,7 +11,7 @@ from google.adk.tools import google_search
 from google.adk.agents import LlmAgent
 from typing import Dict, Any, Optional
 
-APP_NAME = "summary_agent"
+APP_NAME = "enhanced_search_agent"
 USER_ID = "user1234"
 SESSION_ID = "1234"
 SESSION_STATE: Dict[str, Dict[str, Any]] = {}
