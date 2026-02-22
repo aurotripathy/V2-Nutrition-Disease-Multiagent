@@ -122,6 +122,8 @@ def insert_query_plus(*args, **kwargs):
 def embed_modified_query_in_search_agent_instruction(session_id: Optional[str] = None, **kwargs: Any) -> str:
     """Get the modified query from session state and return an instruction that embeds it.
     Used as the search_agent's instruction so the agent is told exactly what to search for."""
+
+    print("=" * 60)
     print(f"[DEBUG]   SESSION_STATE keys: {list(SESSION_STATE.keys())}")
     key = list(SESSION_STATE.keys())[0]
     modified_query = SESSION_STATE[key].get('modified_search_query')
@@ -131,6 +133,7 @@ def embed_modified_query_in_search_agent_instruction(session_id: Optional[str] =
     print(f"[DEBUG]   base: {base} \nModified query: \"{modified_query}\"")
     final_instruction = base + modified_query
     print(f"[DEBUG]   final instruction: {final_instruction}")
+    print("=" * 60)
     return final_instruction
 
 search_agent = Agent(
