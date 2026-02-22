@@ -123,12 +123,14 @@ def embed_modified_query_in_search_agent_instruction(session_id: Optional[str] =
     """Get the modified query from session state and return an instruction that embeds it.
     Used as the search_agent's instruction so the agent is told exactly what to search for."""
     print(f"[DEBUG]   SESSION_STATE keys: {list(SESSION_STATE.keys())}")
-    print(f"[DEBUG]   SESSION_STATE['1234'].get('modified_search_query'): {SESSION_STATE['1234'].get('modified_search_query')}")
-    modified_query = SESSION_STATE['1234'].get('modified_search_query')
+    key = list(SESSION_STATE.keys())[0]
+    modified_query = SESSION_STATE[key].get('modified_search_query')
+    print(f"[DEBUG]   Session State: {modified_query}")
+    
     base = "You are a specialist in Google Search. Use the google_search tool to find the following information: "
     print(f"[DEBUG]   base: {base} \nModified query: \"{modified_query}\"")
     final_instruction = base + modified_query
-    print(f"[DEBUG]   final_instruction: {final_instruction}")
+    print(f"[DEBUG]   final instruction: {final_instruction}")
     return final_instruction
 
 search_agent = Agent(
